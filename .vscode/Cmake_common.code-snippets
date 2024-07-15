@@ -1,0 +1,63 @@
+{
+	// Place your Watchx workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	// "Print to console": {
+	// 	"scope": "javascript,typescript",
+	// 	"prefix": "log",
+	// 	"body": [
+	// 		"console.log('$1');",
+	// 		"$2"
+	// 	],
+	// 	"description": "Log output to console"
+	// }
+
+
+	"Function Commenting in CMake": {
+		"scope": "CMake,cmake",
+		"prefix": "comment",
+		"body": [
+				"# @name ${1:name} ",
+				"#   ",
+				"# @param0  ${2:param0} ",
+				"# @param1  ${3:param1} ",
+				"# @note    ${4:Note}   ",
+				"# @usage   ${5:usage}  ",
+				"# @scope  ${6:scope}   ",
+				"# scope tells where should this cmake function used "
+				"# $0",
+		],
+		"description": "This will give us a CMake function commenting style that will be used for all the cmake files present 
+		in the project  "
+	},
+
+	"File comment template Cmake": {
+		"scope"  : "CMake,cmake",
+		"prefix" : "comment_file",
+		"body"   : [
+			"################################################################################",
+			"# ${1:File_name}.cmake",
+			"#",
+			"# Author: [Himanshu Jangra]",
+			"# Date: [${2:23}-${3:Feb}-2024]",
+			"#",
+			"# Description:",
+			"#   	${4:Descriptoin of the file}.",
+			"#",
+			"# Notes:",
+			"#       Please dont modify existing CMAKE function and commands unless highly required ",
+			"# 		 ${5:Additional notes}"
+			"#",
+			"################################################################################",
+
+			"# [Contents of the file below]",
+
+			"# check for minimum cmake version to run this script",
+			"cmake_minimum_required(VERSION 3.2.1)"
+		]
+	}
+}
