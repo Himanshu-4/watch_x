@@ -6,7 +6,7 @@
 #
 # Description:
 #   	this is a project cmake file that will do the Basic initialisation and enviourment setup.
-#
+#       its methods depednds on other cmake module for project building 
 # Notes:
 #       Please dont modify existing CMAKE function and commands unless highly required 
 # 		 Additional notes
@@ -26,48 +26,72 @@ list(APPEND CMAKE_MODULE_PATH
 
 # include the build cmake file for building the basic build structure 
 include(utility)
-include(tools_setup)
+include(tool_setup)
+
 include(build)
-include(target)
-# the above files doesn't requires sdkconfig.cmake file 
+
+# include the project configuration file
+include(project_conf)
 
 
-# the below files requires sdkconfig 
-include(toolchain_file)
+# ==================================================================================================
+# ==================================================================================================
 
-include(idf_support)
-# =================================================================================================
-# ======================== there are some TARGET  properties that needs to be included so rest of 
-#  the cmakefiles will fetch for their use 
-
-# cmake scripts paths ,
-# Build component path,
-# sdkconfig file, 
-# sdkconfig defualt file
-# targets 
-# Default target
-# 
-# 
-# __build_properties that hold all the properties defined by the rest cmakefiles 
-# 
-
-# @name __idf_dummy_target_init 
+# @name project_init
 #   
-# @note    used to init the dummy target for the build system
-#           this targets hold all the build regarding properties and stuff   
+# @param0  param0 
+# @param1  param1 
+# @note    Note   
 # @usage   usage  
-# @scope  scope   
+# @scope  global   
 # scope tells where should this cmake function used 
 # 
+macro(project_init )
+    # init the project 
 
-function(__idf_dummy_target_init)
-    # add a dummy target to store all the releavant information  regarding build
-    add_library(__idf_build_target STATIC IMPORTED GLOBAL) 
-endfunction()
+endmacro()
+
+
+# @name project_read_conf_file
+#   
+# @param0  "project_config.conf" 
+# @note    used to add the config file to the build 
+# @usage   this can be used to initiate the configuration 
+# @scope  root cmake file
+# scope tells where should this cmake function used 
+# 
+macro(project_read_conf_file config_file)
+    # find the file 
+    find_file(config_out ${config_file}  
+                PATHS ${CMAKE_CURRENT_LIST_DIR}
+                REQUIRED 
+                NO_DEFAULT_PATH)
+
+    message(STATUS "reading the file ${config_out}")
     
-# ==================================================================================================
-# ==================================================================================================
+    # read the file and decode it 
+    __read_conf_file(${config_out})
 
+    # see which configuration goes where 
+
+    # read the file configuration 
+
+    # generate the variables that will be used afterwards
+
+    # all vars must be cache 
+endmacro()
+
+
+# @name project_include_sdkconfig  
+# @param0  sdkconfig
+# @note    this includes the sdkconfig file to the project 
+# @usage   used to generate the sdkconfig file and 
+# @scope  root cmake file   
+# scope tells where should this cmake function used 
+# 
+macro(project_include_sdkconfig_file sdkconfig)
+    # generate the kconfig files and include in the cmake build
+endmacro()
 
 
 # @name esp_sdk_init 

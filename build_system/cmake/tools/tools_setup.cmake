@@ -18,6 +18,37 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
+# =================================================================================================
+# ======================== there are some TARGET  properties that needs to be included so rest of 
+#  the cmakefiles will fetch for their use 
+
+# cmake scripts paths ,
+# Build component path,
+# sdkconfig file, 
+# sdkconfig defualt file
+# targets 
+# Default target
+# 
+# 
+# __build_properties that hold all the properties defined by the rest cmakefiles 
+# 
+
+# @name __idf_dummy_target_init 
+#   
+# @note    used to init the dummy target for the build system
+#           this targets hold all the build regarding properties and stuff   
+# @usage   usage  
+# @scope  scope   
+# scope tells where should this cmake function used 
+# 
+
+function(__idf_dummy_target_init)
+    # add a dummy target to store all the releavant information  regarding build
+    add_library(__idf_build_target STATIC IMPORTED GLOBAL) 
+endfunction()
+    
+
+__idf_dummy_target_init()
 
 # @name tools_inits 
 #   
@@ -38,7 +69,6 @@ function(tools_init target)
 
     # find the ccache program and add in prelaunch commands 
     __tool_find_ccache()
-
 
 endfunction()
 

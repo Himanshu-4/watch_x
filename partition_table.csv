@@ -1,0 +1,19 @@
+# this is the base level partition table that is used for building the project 
+
+# ------------- ESP32 s3 MCU ------------ 16 MB flash ---------------- 2MB PSRAM 
+
+###------------- partition table strtucture ----------------------------------------
+
+
+# Name,             Type,   SubType,        Offset,   Size
+bootloader,         app,    bootloader,     0x1000,   80K
+partition_table,    data,   part_table,     ,         0x1000
+nvs,                data,   nvs,            ,         0x4000
+ble,                data,   ble_nvs,        ,         0x1000
+otadata,            data,   ota_metadata,   ,         0x2000
+phy_init,           data,   phy,            ,         0x1000
+coredump,           data,   coredump,       ,         0x1000
+ota1,               app,    slot0,          ,         1M
+ota2,               app,    slot1,          ,         1M
+Filesystem          data,   files,          ,         13M
+

@@ -181,7 +181,7 @@ endfunction()
 # @scope  parent scope
 # scope tells where should this cmake function used 
 # 
-function(build_init)
+function(build_env_init)
    
     # init the deafult build specs and lang version done in the toolchain_file.cmake
     __build_set_defaults_prop()
