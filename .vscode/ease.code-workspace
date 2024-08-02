@@ -5,7 +5,10 @@
             "path": "D:\\smart_watch\\watch_x"
         }
     ],
-    "settings": {}
+    "settings": {
+        "terminal.integrated.suggest.enabled": true,
+        
+    }
 }
 
 

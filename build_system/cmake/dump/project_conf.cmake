@@ -67,6 +67,13 @@ function(__read_conf_file conf_file)
 
     string(REPLACE ${line_ending} ";" file_lines "${file_content}")
 
+    list(LENGTH file_lines list_len)
+    set(current_len 0)
+
+    while(current_len < list_len)
+        
+    # read and decode the list 
+    endwhile()
     
     # read each line 
     foreach(line ${file_lines})

@@ -24,7 +24,7 @@ include(build_system/cmake/project.cmake)
 
 # -------------------------------------------------------------------------------
 # read the root level configuration file, set the cache varaible that are defined in the config file
-project_read_conf_file("project_config.conf")
+project_read_conf_file("project_config.conf"  "${CMAKE_CURRENT_LIST_DIR}/src/configs")
 
 # include the sdkconfig file in the build process 
 project_include_sdkconfig_file("sdkconfig.txt")

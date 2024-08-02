@@ -16,6 +16,9 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
+
+set(CMAKE_CURENT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
+
 # append path for the cmake search path for other module files 
 list(APPEND CMAKE_MODULE_PATH  
     ${CMAKE_CURRENT_LIST_DIR}/scripts 
@@ -26,12 +29,7 @@ list(APPEND CMAKE_MODULE_PATH
 
 # include the build cmake file for building the basic build structure 
 include(utility)
-include(tool_setup)
 
-include(build)
-
-# include the project configuration file
-include(project_conf)
 
 
 # ==================================================================================================
@@ -52,6 +50,44 @@ macro(project_init )
 endmacro()
 
 
+# @name __Execute the config_python_script  
+#   
+# @param0  config_file
+# @param1  out_file
+# @note    used to execute python for config file
+# @usage   usage  
+# @scope  in a macro defined below
+# scope tells where should this cmake function used 
+# 
+function(__execute_config_python_script config_file out_file)
+    
+    if(NOT EXISTS ${config_file})
+        message(FATAL_ERROR "the ${config_file} doesn;t exist in path")
+    endif()
+    
+    # set the python script as parse_config.py 
+    set(PYTHON_SCRIPT "${CMAKE_CURENT_DIRECTORY}/../python_scripts/parse_config.py")
+    
+    # execute the process , edit should be done at the root level (project dir)
+    execute_process(
+                COMMAND ${CMAKE_COMMAND} -E env python ${PYTHON_SCRIPT} ${config_file} ${out_file}
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+                RESULT_VARIABLE result
+                OUTPUT_VARIABLE output
+                ERROR_VARIABLE error
+                    )
+
+    # Check if the Python script ran successfully
+    if(result EQUAL 0)
+        message(STATUS "Generated ${out_file} for Cmake form ${config_file}")
+        message(STATUS "Output: ${output}")
+    else()
+        message(FATAL_ERROR "Python script failed with error: ${error}")
+    endif()
+        
+endfunction()
+
+
 # @name project_read_conf_file
 #   
 # @param0  "project_config.conf" 
@@ -59,26 +95,25 @@ endmacro()
 # @usage   this can be used to initiate the configuration 
 # @scope  root cmake file
 # scope tells where should this cmake function used 
-# 
-macro(project_read_conf_file config_file)
-    # find the file 
+#
+macro(project_read_conf_file config_file config_dir)
+    
+    # find the file, the project config file can be found only in 
+    # project root  directory , root level cmakefile, or where src is defined 
     find_file(config_out ${config_file}  
-                PATHS ${CMAKE_CURRENT_LIST_DIR}
+                PATHS ${CMAKE_SOURCE_DIR}
                 REQUIRED 
                 NO_DEFAULT_PATH)
-
-    message(STATUS "reading the file ${config_out}")
     
-    # read the file and decode it 
-    __read_conf_file(${config_out})
+    if (NOT EXISTS ${config_dir})
+        message(FATAL_ERROR "the ${config_dir} doesn't exist")
+    endif()
 
-    # see which configuration goes where 
+    set(include_file "${config_dir}/project_config.cmake")
+    __execute_config_python_script("${config_out}" "${include_file}")
 
-    # read the file configuration 
-
-    # generate the variables that will be used afterwards
-
-    # all vars must be cache 
+    # include that cmake file
+    include(${include_file})
 endmacro()
 
 
