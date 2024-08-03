@@ -16,6 +16,7 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
+cmake_policy(SET CMP0057 NEW)
 
 set(CMAKE_CURENT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}")
 
@@ -64,7 +65,6 @@ function(__execute_config_python_script config_file out_file)
     if(NOT EXISTS ${config_file})
         message(FATAL_ERROR "the ${config_file} doesn;t exist in path")
     endif()
-    
     # set the python script as parse_config.py 
     set(PYTHON_SCRIPT "${CMAKE_CURENT_DIRECTORY}/../python_scripts/parse_config.py")
     
@@ -154,8 +154,6 @@ macro(esp_sdk_init )
     set(CMAKE_COLOR_DIAGNOSTICS ON)
     
     # set the new cmake policy 
-    # cmake_policy(SET CMP0058 NEW) no beifits
-    
     __idf_dummy_target_init()
     
     # setting the cmake scripts path into the TARGET property 

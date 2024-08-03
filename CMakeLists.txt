@@ -48,6 +48,7 @@ message(STATUS "COMPOENETS are --> ${BUILD_COMPONENTS}")
 project(watch_x VERSION 1.0.0)
 
 
+
 set(kernel_target watch_x_kernel)
 # create a build file for the project (this is target that has a direct dependency with upload )
 # project_add_executable(${kernel_target}  kerenel SOURCE_DIR ./src/kernel)
