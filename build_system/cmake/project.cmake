@@ -28,27 +28,13 @@ list(APPEND CMAKE_MODULE_PATH
     ${CMAKE_CURRENT_LIST_DIR}
 )
 
-# include the build cmake file for building the basic build structure 
-include(utility)
+
+
 
 
 
 # ==================================================================================================
 # ==================================================================================================
-
-# @name project_init
-#   
-# @param0  param0 
-# @param1  param1 
-# @note    Note   
-# @usage   usage  
-# @scope  global   
-# scope tells where should this cmake function used 
-# 
-macro(project_init )
-    # init the project 
-
-endmacro()
 
 
 # @name __Execute the config_python_script  
@@ -129,15 +115,26 @@ macro(project_include_sdkconfig_file sdkconfig)
 endmacro()
 
 
-# @name esp_sdk_init 
+# @name project_init
 #   
-# @note    used to initialise the sdk for the target    
-# @usage   it is the first function to call when including this file 
-# @scope  parent scope   
+# @param0  param0 
+# @param1  param1 
+# @note    Note   
+# @usage   usage  
+# @scope  global   
 # scope tells where should this cmake function used 
 # 
-macro(esp_sdk_init )
+macro(project_init )
+    # init the project 
+    # include the sdkconfig file 
+
     
+    # include the build cmake file for building the basic build structure 
+    include(utility)
+    include(target) # target automatically add the toolchain 
+    include(build)  # build automatically add the other build stuff 
+    include(ldgen)
+    include(components)
 
     # check if build and source dir are set 
     if(NOT( DEFINED CMAKE_SOURCE_DIR AND  DEFINED CMAKE_BINARY_DIR))

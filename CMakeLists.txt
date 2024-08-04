@@ -24,10 +24,9 @@ include(build_system/cmake/project.cmake)
 
 # -------------------------------------------------------------------------------
 # read the root level configuration file, set the cache varaible that are defined in the config file
-project_read_conf_file("project_config.conf"  "${CMAKE_CURRENT_LIST_DIR}/src/configs")
+project_gen_conf_file("project_config.conf"  "${CMAKE_CURRENT_LIST_DIR}/src/configs")
 
-# include the sdkconfig file in the build process 
-project_include_sdkconfig_file("sdkconfig.txt")
+project_init()
 
 message(STATUS "COMPOENETS are --> ${BUILD_COMPONENTS}")
 
@@ -35,17 +34,9 @@ message(STATUS "COMPOENETS are --> ${BUILD_COMPONENTS}")
 # and their kconfig file for project configurations 
 # project_include_components(${BUILD_COMPONENTS})
 
-# include the kconfig files in the top level of the cmake file here, this enables 
-# project_init()
-
-# init the sdk and toolcahin files 
-# project_init_toolchain()
-
-# --------------------------------------------------------------------------------
-# start defining your project 
 
 # create a project 
-project(watch_x VERSION 1.0.0)
+project(${NAME} VERSION "1.0.0")
 
 
 

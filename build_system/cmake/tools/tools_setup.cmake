@@ -243,13 +243,6 @@ endfunction()
 # scope tells where should this cmake function used 
 # 
 function(__tool_find_ccache)  
-    # find_program(git_prog "git" 
-    #     PATHS ${GIT_STANDARD_PATH}
-    #     REQUIRED
-    #     DOC "Git Version managment tool for the IDF repo"
-    #     NO_DEFAULT_PATH
-    #     NO_CMAKE_FIND_ROOT_PATH
-    # )
     find_program(ccache_prog "ccache"
                         PATHS "C:\\Program Files (x86)\\idf-tools\\tools\\ccache\\4.8\\ccache-4.8-windows-x86_64"
                         REQUIRED
@@ -260,7 +253,7 @@ function(__tool_find_ccache)
         message(STATUS "ccache will be used for faster recompilation")
         set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
     else()
-        message(WARNING "ccache program is not found and is used in the build")
+        message(FATAL_ERROR "ccache program is not found and is used in the build")
     endif()
 
 endfunction()
