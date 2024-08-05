@@ -80,6 +80,10 @@ class config_gen:
             # Handle key-value pairs and variable substitutions
             if '=' in line and not in_list:
                 key, value = map(str.strip, line.split('=', 1))
+                
+                # if there is \ in the value then substitute that withdouble quotes 
+                if '\\' in value:
+                    value = re.sub(re.compile(r'\\'), lambda match : '\\' + '\\', value )
                 if '$' in value:
                     value = re.sub( re.compile(r'\${(.*?)}'), lambda match: self.sections[current_section].get(match.group(1), ""), value)
                 self.sections[current_section].update({key : value.strip('"')})
@@ -97,14 +101,14 @@ class config_gen:
                 if isinstance(data, dict):
                     for key, value in data.items():
                         if isinstance(value, list):
-                            cmake_file.write(f"set({key.upper()} \n")
+                            cmake_file.write(f"set({section.upper()}_{key.upper()} \n")
                             cmake_file.write(f"\t")
                             for item in value:
                                 cmake_file.write(f"{item}\t")
                             cmake_file.write(")\n")
                         
                         else : 
-                            cmake_file.write(f'set({key.upper()} "{value}")\n')
+                            cmake_file.write(f'set({section.upper()}_{key.upper()} "{value}")\n')
                     # write section also 
                     cmake_file.write(f"set({section.upper()} \n")
                     cmake_file.write("\t")

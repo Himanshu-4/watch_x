@@ -174,29 +174,6 @@ function(target_linker_script target deptype scriptfiles)
 endfunction()
 
 
-# @name build_init 
-#    
-# @note    initalise the basic build enviourment for the target mcu
-# @usage   used in idf_init or in the project.cmake init 
-# @scope  parent scope
-# scope tells where should this cmake function used 
-# 
-function(build_env_init)
-   
-    # init the deafult build specs and lang version done in the toolchain_file.cmake
-    __build_set_defaults_prop()
-
-    # init the basic compiler flags as of known and that are common for all targets 
-    __build_set_default_build_flags()
-
-    #  call the init process of the ldgen tool
-    # this init the ld process files 
-    ld_ldgen_env_init()
-
-endfunction()
-
-
-
 # add_prebuild_library
 #
 # Add prebuilt library with support for adding dependencies on ESP-IDF components.
@@ -240,7 +217,7 @@ function(__build_set_default_build_flags)
                     "_GNU_SOURCE"
                     "configENABLE_FREERTOS_DEBUG_OCDAWARE=1"
                     # @todo this should be set by build_get_idf_git_revision 
-                    IDF_VER=\"idf_ver_git\"
+                    IDF_VER= "${SDK_VERSION}"
                     )
                     
     if(NOT BOOTLOADER_BUILD)
@@ -327,11 +304,35 @@ endfunction()
 function(__build_set_defaults_prop)
 
     idf_build_set_property(__PREFIX idf)
-    idf_build_set_property(MAIN_BUILD_DIR "${CMAKE_MAIN_BUILD_DIR}")
+    idf_build_set_property(BUILD_DIR ${CMAKE_BINARY_DIR})
     # the c standard is defined in the toolchain file but we can override it here according 
     # to specified in the sdkconfig.cmake file 
     # get the build standard property 
 endfunction()
+
+# @name build_init 
+#    
+# @note    initalise the basic build enviourment for the target mcu
+# @usage   used in idf_init or in the project.cmake init 
+# @scope  parent scope
+# scope tells where should this cmake function used 
+# 
+function(build_env_init)
+   
+    # init the deafult build specs and lang version done in the toolchain_file.cmake
+    __build_set_defaults_prop()
+
+    # init the basic compiler flags as of known and that are common for all targets 
+    __build_set_default_build_flags()
+
+    #  call the init process of the ldgen tool
+    # this init the ld process files 
+    ld_ldgen_env_init()
+
+    kconfig_init()
+
+endfunction()
+
 
 
 

@@ -156,7 +156,6 @@ function(__tools_find_python )
         return()
     endif()
 
-    set(PYTHON_STANDARD_PATH "C:\\Program Files (x86)\\idf-tools\\python_env\\idf5.1_py3.10_env\\Scripts")
     # tools can be found using found program 
     find_program(python_prog  "python" 
                     PATHS ${PYTHON_STANDARD_PATH}

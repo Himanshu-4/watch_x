@@ -29,8 +29,11 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 
-
-
+include(utility)
+include(ldgen)
+include(build)
+include(target) # target automatically add the toolchain 
+include(components)
 
 
 # ==================================================================================================
@@ -74,7 +77,7 @@ function(__execute_config_python_script config_file out_file)
 endfunction()
 
 
-# @name project_read_conf_file
+# @name project_gen_conf_file
 #   
 # @param0  "project_config.conf" 
 # @note    used to add the config file to the build 
@@ -82,7 +85,7 @@ endfunction()
 # @scope  root cmake file
 # scope tells where should this cmake function used 
 #
-macro(project_read_conf_file config_file config_dir)
+macro(project_gen_conf_file config_file config_dir)
     
     # find the file, the project config file can be found only in 
     # project root  directory , root level cmakefile, or where src is defined 
@@ -125,47 +128,29 @@ endmacro()
 # scope tells where should this cmake function used 
 # 
 macro(project_init )
-    # init the project 
-    # include the sdkconfig file 
 
+    # set the paths and check it  
+    foreach(path ${PATH})
+        if (NOT EXISTS ${path})
+            message(FATAL_ERROR "one of the path ${path} supplied is not exists")
+        endif()
+    endforeach()
     
-    # include the build cmake file for building the basic build structure 
-    include(utility)
-    include(target) # target automatically add the toolchain 
-    include(build)  # build automatically add the other build stuff 
-    include(ldgen)
-    include(components)
-
-    # check if build and source dir are set 
     if(NOT( DEFINED CMAKE_SOURCE_DIR AND  DEFINED CMAKE_BINARY_DIR))
-        message(FATAL_ERROR "cmake source and binarry directory are not properly set")
-    endif()
-
-    # file(IS_DIRECTORY)
-    if(NOT(EXISTS "${CMAKE_SOURCE_DIR}" AND EXISTS "${CMAKE_BINARY_DIR}"))
-            message(FATAL_ERROR "cmake_source or binary directory doesn't exist")
+        # set the directoreis 
+        set(CMAKE_SOURCE_DIR "${PATH_SRC_DIR}")
+        set(CMAKE_BINARY_DIR "${PATH_BUILD_DIR}")
     endif()
     
+    # set the path vraibles 
+    idf_build_set_property(IDF_PATH "${PATH_IDF_PATH}")
+    idf_build_set_property(IDF_TOOLS "${PATH_IDF_TOOLS}")
+    idf_build_set_property(PROJECT_DIR  "${CMAKE_SOURCE_DIR}")
    
     # turn on the color diagnosistic feature 
     set(CMAKE_COLOR_DIAGNOSTICS ON)
-    
-    # set the new cmake policy 
+     
     __idf_dummy_target_init()
-    
-    # setting the cmake scripts path into the TARGET property 
-    idf_build_set_property(CMAKE_SCRIPTS_PATH  "D:\\stimveda_codebase\\V1_OTA\\cmake"  )
-    idf_build_set_property(BUILD_COMPONENTS_PATH "D:\\stimveda_codebase\\V1_OTA\\components")
-    idf_build_set_property(PROJECT_DIR  "${CMAKE_SOURCE_DIR}")
-    
-    # find the IDF path from the enviourment variables and set in the property 
-    set(idf_path $ENV{IDF_PATH})
-    if(NOT EXISTS ${idf_path})
-        message(FATAL_ERROR "ESP-IDF path not set, please set the IDF path in ENV variables")
-    endif()
-    file(TO_CMAKE_PATH "${idf_path}" idf_path)
-    # set the TARGET property for the IDF_PATH
-    idf_build_set_property(IDF_PATH "${idf_path}")
     
     # find the sdkconfig file in the root project directory 
     __find_sdkconfig_file(sdkconfig_file)

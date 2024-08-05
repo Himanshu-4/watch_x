@@ -1,9 +1,5 @@
 ################################################################################
 # kconfig.cmake
-#
-# Author: [Himanshu Jangra]
-# Date: [26-Feb-2024]
-#
 # Description:
 #   	kconfig file that will help in configuration the project 
 #       and invoke menuconfig tool.
@@ -36,31 +32,16 @@ function(kconfig_root_init)
         return()
     endif()
 
+    idf_build_get_property(build_dir BUILD_DIR)
+    idf_build_get_property(idf_path IDF_PATH)
+
     # create a kconfig directory 
-    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/kconfig")
-    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/config")
+    file(MAKE_DIRECTORY "${build_dir}/kconfig")
+    file(MAKE_DIRECTORY "${build_dir}/config")
 
-    # get the build components path 
-    idf_build_get_property(build_comp_path BUILD_COMPONENTS_PATH)
-
-    # find the kconfig and sdkconfig.rename files in the build_components path 
-    find_file(kconfig_file "Kconfig" 
-                PATHS "${build_comp_path}"
-                REQUIRED 
-                NO_DEFAULT_PATH
-                NO_CMAKE_FIND_ROOT_PATH) 
-
-    find_file(sdkconfig_rename_file "sdkconfig.rename" 
-                PATHS "${build_comp_path}"
-                REQUIRED 
-                NO_DEFAULT_PATH
-                NO_CMAKE_FIND_ROOT_PATH)
-
-
-    idf_build_set_property( __ROOT_KCONFIG ${kconfig_file})
-    idf_build_set_property( __ROOT_SDKCONFIG_RENAME ${sdkconfig_rename_file})
+    idf_build_set_property( __ROOT_KCONFIG ${idf_path}/Kconfig)
+    idf_build_set_property( __ROOT_SDKCONFIG_RENAME  ${idf_path}/sdkconfig.rename)
     idf_build_set_property( __OUTPUT_SDKCONFIG 1)
-
 
 endfunction()
 
@@ -277,7 +258,7 @@ function(kconfig_generate_config  build_components)
     idf_build_set_property(SDKCONFIG_JSON_MENUS ${sdkconfig_json_menus})
     idf_build_set_property(CONFIG_DIR ${config_dir})
 
-    set(MENUCONFIG_CMD ${python} -m menuconfig)
+    set(MENUCONFIG_CMD ${python} ${idf_path}/tools/kconfig_new/menuconfig_wrapper.py)
     set(TERM_CHECK_CMD ${python} ${idf_path}/tools/check_term.py)
 
     # Generate the menuconfig target
@@ -310,9 +291,9 @@ function(kconfig_generate_config  build_components)
     # Custom target to run kconfserver from the build tool
     add_custom_target(confserver
         COMMAND ${prepare_kconfig_files_command}
-        COMMAND ${python} -m kconfserver
+        COMMAND ${python} ${idf_path}/tools/kconfig_new/confserver.py
         --env-file ${config_env_path}
-        --kconfig ${IDF_PATH}/Kconfig
+        --kconfig ${idf_path}/Kconfig
         --sdkconfig-rename ${root_sdkconfig_rename}
         --config ${sdkconfig}
         VERBATIM

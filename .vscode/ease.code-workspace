@@ -7,7 +7,8 @@
     ],
     "settings": {
         "terminal.integrated.suggest.enabled": true,
-        
+        "git.autoRepositoryDetection": "openEditors",
+        "git.ignoredRepositories": ["esp-idf"]   
     }
 }
 

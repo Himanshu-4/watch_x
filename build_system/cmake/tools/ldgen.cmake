@@ -1,9 +1,6 @@
 ################################################################################
 # ldgen.cmake
 #
-# Author: [Himanshu Jangra]
-# Date: [29-Feb-2024]
-#
 # Description:
 #   	this will read the .lf files and convert it into .ld files for the linker .
 #
@@ -25,11 +22,14 @@ cmake_minimum_required(VERSION 3.2.1)
 # scope tells where should this cmake function used 
 # 
 function(ld_ldgen_env_init )
+
+    # get the build process and then call it 
+    idf_build_get_property(build_dir BUILD_DIR)
     if(BOOTLOADER_BUILD)
         return()
     endif()
     # create a ldgen directory in the build dir 
-    file(MAKE_DIRECTORY  ${CMAKE_BINARY_DIR}/ld)
+    file(MAKE_DIRECTORY  ${build_dir}/ld)
 
 endfunction()
 
@@ -70,7 +70,8 @@ function(__ldgen_process_template target template output)
             
     idf_build_get_property(idf_path IDF_PATH)
 
-    set(build_dir ${CMAKE_BINARY_DIR})
+    # get the build dir from property
+    idf_build_get_property(build_dir BUILD_DIR)
 
     idf_build_get_property(ldgen_libraries __LDGEN_LIBRARIES GENERATOR_EXPRESSION)
 
@@ -111,7 +112,7 @@ function(__ldgen_process_template target template output)
         --objdump   "${CMAKE_OBJDUMP}"
         ${ldgen_check}
         # run in the binary directory 
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        WORKING_DIRECTORY ${build_dir}
         DEPENDS     ${template} ${ldgen_fragment_files} ${ldgen_depends} ${SDKCONFIG}
         VERBATIM
         USES_TERMINAL
