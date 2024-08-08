@@ -122,8 +122,8 @@ function(find_target_mcu sdkconf_file target)
     
     if(NOT env_idf_target)
         # IDF_TARGET not set in environment, see if it is set in cache
-        if(DEFINED CACHE{IDF_TARGET})
-            set(env_idf_target ${IDF_TARGET})
+        if(DEFINED TARGET_BOARD)
+            set(env_idf_target ${TARGET_BOARD})
         
         elseif(IDF_TARGET)
             message(STATUS "IDF target is defined in the cmaek argument ${IDF_TARGET}")
@@ -158,11 +158,11 @@ function(find_target_mcu sdkconf_file target)
     
   
     # Check if selected target is consistent with sdkconfig
-    __target_from_config("${sdkconf_file}" sdkconfig_target where)
+    __target_from_config("${sdkconf_file}" sdkconfig_target)
     
     if(sdkconfig_target)
         if(NOT ${sdkconfig_target} STREQUAL ${env_idf_target})
-            message(FATAL_ERROR " Target '${sdkconfig_target}' in sdkconfig '${where}'"
+            message(FATAL_ERROR " Target '${sdkconfig_target}' in sdkconfig ${sdkconf_file} "
                 " does not match currently selected IDF_TARGET '${IDF_TARGET}'."
                 " To change the target, clear the build directory and sdkconfig file,"
                 " and build the project again.")

@@ -1,9 +1,5 @@
 ################################################################################
 # build.cmake
-#
-# Author: [Himanshu Jangra]
-# Date: [22-Feb-2024]
-#
 # Description:
 #   	this file contains the build regarding stuff like a dummy target so that to fetch some properties 
 #
@@ -16,7 +12,6 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
-include(ldgen)
 
 # idf_build_get_property
 #
@@ -217,7 +212,9 @@ function(__build_set_default_build_flags)
                     "_GNU_SOURCE"
                     "configENABLE_FREERTOS_DEBUG_OCDAWARE=1"
                     # @todo this should be set by build_get_idf_git_revision 
-                    IDF_VER= "${SDK_VERSION}"
+                    "IDF_VER=${PROJECT_SDK_VERSION}"
+
+                    ${COMPILER_DEFINATION}
                     )
                     
     if(NOT BOOTLOADER_BUILD)
@@ -266,7 +263,10 @@ function(__build_set_default_build_flags)
                                     # ignore multiple enum conversion warnings since gcc 11
                                     # TODO: IDF-5163
                                     "-Wno-enum-conversion"
-
+                                    
+                                    $<$<COMPILE_LANGUAGE:C>:${COMPILER_C_OPTIONS}>
+                                    $<$<COMPILE_LANGUAGE:CXX>:${COMPILER_CXX_OPTIONS}>
+                                    $<$<COMPILE_LANGUAGE:ASM>:${COMPILER_ASM_OPTIONS}>
                                     )
     # set the compile definations and flags as common 
     # set(COMMON_OPTIONS "${compile_flags}" CACHE STRING "compile flags for the target")
@@ -290,11 +290,19 @@ function(__build_set_default_build_flags)
     idf_build_set_property(CXX_COMPILE_OPTIONS "${compile_flags}" APPEND)
     idf_build_set_property(ASM_COMPILE_OPTIONS "${compile_flags}" APPEND)
     
+
+    # append the compile flags 
+    list(APPEND CMAKE_C_FLAGS "${compile_flags}")
+    list(APPEND CMAKE_CXX_FLAGS "${compile_flags}")
+
+    list(REMOVE_DUPLICATES CMAKE_C_FLAGS)
+    list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
+
 endfunction()
 
 
 
-# @name __build_set_default_lang_version 
+# @name __build_set_defaults_prop 
 #   
 # @note    Note   
 # @usage   usage  
@@ -302,9 +310,9 @@ endfunction()
 # scope tells where should this cmake function used 
 # 
 function(__build_set_defaults_prop)
-
     idf_build_set_property(__PREFIX idf)
-    idf_build_set_property(BUILD_DIR ${CMAKE_BINARY_DIR})
+
+
     # the c standard is defined in the toolchain file but we can override it here according 
     # to specified in the sdkconfig.cmake file 
     # get the build standard property 
@@ -317,7 +325,7 @@ endfunction()
 # @scope  parent scope
 # scope tells where should this cmake function used 
 # 
-function(build_env_init)
+function(build_init)
    
     # init the deafult build specs and lang version done in the toolchain_file.cmake
     __build_set_defaults_prop()
@@ -327,8 +335,9 @@ function(build_env_init)
 
     #  call the init process of the ldgen tool
     # this init the ld process files 
-    ld_ldgen_env_init()
+    ldgen_init()
 
+    # call the kconfig init 
     kconfig_init()
 
 endfunction()

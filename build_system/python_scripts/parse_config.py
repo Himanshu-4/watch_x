@@ -81,9 +81,9 @@ class config_gen:
             if '=' in line and not in_list:
                 key, value = map(str.strip, line.split('=', 1))
                 
-                # if there is \ in the value then substitute that withdouble quotes 
+                # if there is \ in the value then substitute that / for cmake compatible path 
                 if '\\' in value:
-                    value = re.sub(re.compile(r'\\'), lambda match : '\\' + '\\', value )
+                    value = re.sub(re.compile(r'\\'), lambda match : '/' , value )
                 if '$' in value:
                     value = re.sub( re.compile(r'\${(.*?)}'), lambda match: self.sections[current_section].get(match.group(1), ""), value)
                 self.sections[current_section].update({key : value.strip('"')})

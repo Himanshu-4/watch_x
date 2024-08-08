@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.2.1)
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-function(kconfig_root_init)
+function(kconfig_init)
 
     # we are not initing kconfig in bootloader build 
     if(BOOTLOADER_BUILD)
@@ -145,8 +145,10 @@ function(kconfig_generate_config  build_components)
     idf_build_get_property(idf_path IDF_PATH)
     idf_build_get_property(idf_env_fpga __IDF_ENV_FPGA)
 
+    # get the build dir 
+    idf_build_get_property(build_dir BUILD_DIR)
     
-    set(kconfig_dir "${CMAKE_BINARY_DIR}/kconfig")
+    set(kconfig_dir "${build_dir}/kconfig")
     # These are the paths for files which will contain the generated "source" lines for COMPONENT_KCONFIGS and
     # COMPONENT_KCONFIGS_PROJBUILD
     set(kconfigs_projbuild_path "${kconfig_dir}/kconfigs_projbuild.in")
@@ -168,6 +170,10 @@ function(kconfig_generate_config  build_components)
     idf_build_get_property(sdkconfig SDKCONFIG) 
     idf_build_get_property(sdkconfig_defaults SDKCONFIG_DEFAULT)
     
+    if (NOT EXISTS ${sdkconfig})
+        message(FATAL_ERROR "the ${sdkconfig} file doesn't exists")
+    endif()
+
     
     # fetch the sdkconfig.defaults 
     if(sdkconfig_defaults)
@@ -194,7 +200,7 @@ function(kconfig_generate_config  build_components)
         ${defaults_arg}
         --env-file ${config_env_path})
         
-    set(config_dir "${CMAKE_BINARY_DIR}/config")
+    set(config_dir "${build_dir}/config")
 
 
     # Generate the config outputs

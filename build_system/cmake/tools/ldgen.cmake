@@ -21,7 +21,7 @@ cmake_minimum_required(VERSION 3.2.1)
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-function(ld_ldgen_env_init )
+function(ldgen_init )
 
     # get the build process and then call it 
     idf_build_get_property(build_dir BUILD_DIR)
@@ -29,8 +29,7 @@ function(ld_ldgen_env_init )
         return()
     endif()
     # create a ldgen directory in the build dir 
-    file(MAKE_DIRECTORY  ${build_dir}/ld)
-
+    file(MAKE_DIRECTORY  "${build_dir}/ld")
 endfunction()
 
 

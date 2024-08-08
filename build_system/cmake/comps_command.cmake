@@ -1,9 +1,5 @@
 ################################################################################
 # comps_command.cmake
-#
-# Author: [Himanshu Jangra]
-# Date: [6-March-2024]
-#
 # Description:
 #   	component command that will build the component  file.
 #
@@ -16,13 +12,9 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
-include(kconfig)
+# set the cmake policy to new 
 
-# include the ldgen file for processing linker fragment files
-include(ldgen)
-
-# use the utility functions for component building 
-include(utility)
+cmake_policy(SET CMP0057 NEW)
 
 # idf_component_get_property
 #
@@ -113,8 +105,7 @@ function(__component_set_property component_target property val)
     # Keep track of set component properties this will contian all the properties set 
     # by the different components 
     __component_get_property(properties ${component_target} __COMPONENT_PROPERTIES)
-    list(FIND properties ${property} res)
-    if(res EQUAL -1 )
+    if(NOT property IN_LIST properties)
         __component_set_property(${component_target} __COMPONENT_PROPERTIES ${property} APPEND)
     endif()
 endfunction()
@@ -130,52 +121,46 @@ endfunction()
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-function(__component_get_target target_out comp_name)
-
-    # implementation to discard unknown components 
-    idf_build_get_property(component_targets SCAN_COMPONENTS)
-    list(FIND component_targets ${comp_name} res)
-    if(res EQUAL -1)
-        message(FATAL_ERROR "Can't find the component ${comp_name} in the SCAN components")
-    endif()
+function(__component_get_target target_out name_or_alias)
+    # we know that the name could match one of the following thing 
     
-    # component target must be 3 underscore and its lib is 2 underscore 
-    set(${target_out} ___idf_${comp_name} PARENT_SCOPE)    
-endfunction()
-
-# show the build components to the user 
-function(__show_build_component components )
-    # SHOW_WITH_TARGETS
-    set(options SHOW_WITH_TARGETS)
-    set(single_value "")
-    set(multi_value "")
-    cmake_parse_arguments(_ "${options}" "${single_value}" "${multi_value}" ${ARGN})
-
-    # show all the components 
-    message(STATUS "all the components are ${components}" )    
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    idf_build_get_property(prefix __PREFIX)
+    # check if the name is present in the component_targets
     
-    set(build_targets "")
-    if(__SHOW_WITH_TARGETS)
-        # do something to show with the targets
-        # get the targets and show with them 
-        foreach(comp ${components})
-            __component_get_target(target_name ${comp})
-            __component_get_property(lib_name ${target_name} COMPONENT_LIB)
-            list(APPEND build_targets ${lib_name})
-        endforeach()
-    
-    # show the build targets 
-    message(STATUS "Build targets are ${build_targets}")
+    string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" component_name ${name_or_alias})    
+
+    set(component_target ___${prefix}_${component_name})
+ 
+    # if target not found in __COMPONENT_TARGETS , show warning 
+    if (NOT ${component_target} IN_LIST component_targets)
+        # show the warning to the user 
+        message(WARNING "component target ${component_target} is not found in the component_target list")
     endif()
 
+    set(${target_out} ${component_target} PARENT_SCOPE)
+
+    # # List of input strings
+    # set(input_strings "___idf_soc;__idf_esp_log;idf_nvs;_idfspi_flash;idf::newlib;idf_bt;esp_system;esp_wifi")
+
+    # # Loop through each item in the list
+    # foreach(item ${input_strings})
+    #     # Extract the name using a regular expression that includes idf
+    #     string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" name "${item}")
+    #     message(STATUS "Extracted name: ${name}")
+    # endforeach()
+
+    # # exit here 
+    # message(FATAL_ERROR "can't proce")
 endfunction()
+
 
 # =====================================================================================================
 # =====================================================================================================
 # ===========================     Function to scan the all the components present in the component dir 
 # this will help us to attach the basic properties to that component without including in the build 
 
-# @name __scan_components 
+# @name __add_component 
 #   
 # @param0  comps_path 
 # @note    used to add the components in the build 
@@ -183,30 +168,34 @@ endfunction()
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-function(__scan_components comp_path)
+function(__scan_components sdk_path prefix)
    
     set(components "")
-    get_filename_component(comps_path ${comps_path} ABSOLUTE)
+    get_filename_component(comps_path ${sdk_path} ABSOLUTE)
     if(NOT EXISTS ${comps_path})
         message(FATAL_ERROR "${comps_path} path doesn't valid Path that contain COMPONENTS")
     endif()
 
+    # get all the dir that contains the cmakelists.txt
     file(GLOB  build_comps_dirs "${comps_path}/*/CMakeLists.txt" )
 
     foreach(comp_dir ${build_comps_dirs})
         get_filename_component(component_dir ${comp_dir} DIRECTORY)
-        __add_scan_component("${component_dir}")
+        __add_individual_component("${component_dir}" ${prefix})
     endforeach()
+
     
-    # show all the scanned components to the user 
-    idf_build_get_property(scan_comps SCAN_COMPONENTS ) 
-    message(STATUS "Scan components are --> ${scan_comps}")
+    idf_build_get_property(scan SCAN_COMPONENTS)
+    message(STATUS "------------------------------scan compoents are below-------------------------------\r\n${scan}\r\n-------------------------------------------------------------------------------------------------------")
+
+    
 endfunction()
+
 #
 # Add a component to process in the build. The components are keeped tracked of in property
 # __COMPONENT_TARGETS in component target form.
 #
-function(__add_scan_component component_dir)
+function(__add_individual_component component_dir prefix)
     # For each component, two entities are created: a component target and a component library. The
     # component library is created during component registration (the actual static/interface library).
     # On the other hand, component targets are created early in the build
@@ -215,25 +204,12 @@ function(__add_scan_component component_dir)
     # Plus, interface libraries have limitations on the types of properties that can be set on them,
     # so later in the build, these component targets actually contain the properties meant for the
     # corresponding component library.
-
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    
     get_filename_component(abs_dir ${component_dir} ABSOLUTE)
     get_filename_component(base_dir ${abs_dir} NAME)
     
     set(component_name ${base_dir})
-
-    # If a component of the same name has not been added before If it has been added
-    # before just override the properties. As a side effect, components added later
-    # 'override' components added earlier.
-    if(NOT component_targets EQUAL "")
-        list(FIND component_targets ${component_name} res )
-        if(NOT res EQUAL -1)
-            message(WARNING "can't add ${component_name} into the scan components already present ")
-            return()
-        endif()
-    endif()
-
-    # get the prefix from the build property
-    idf_build_get_property(prefix __PREFIX)
     
     if(NOT EXISTS "${abs_dir}/CMakeLists.txt")
         message(FATAL_ERROR "Directory '${component_dir}' does not contain a component.")
@@ -242,12 +218,23 @@ function(__add_scan_component component_dir)
     # The component target has three underscores as a prefix. The corresponding component library
     # only has two.
     set(component_target ___${prefix}_${component_name})
-
-    # if the component_target is not a target means it not defined earlier
-    # if(NOT TARGET ${component_target})
-    # add_library(${component_target} STATIC IMPORTED)
-    add_library(${component_target} INTERFACE)
-
+ 
+    # If a component of the same name has not been added before If it has been added
+    # before just override the properties. As a side effect, components added later
+    # 'override' components added earlier.
+    # if (NOT ${component_target} IN_LIST component_targets) // this creates some isssues 
+    list(FIND component_targets ${component_target} res)
+    if(res EQUAL -1)
+        if(NOT TARGET ${component_target})
+            add_library(${component_target} STATIC IMPORTED)
+        endif()
+        idf_build_set_property(__COMPONENT_TARGETS ${component_target} APPEND)
+    else()
+        message(WARNING "the compoent target ${component_target} already present in __COMPONENT_TARGET")
+        __component_get_property(dir ${component_target} COMPONENT_DIR)
+        __component_set_property(${component_target} COMPONENT_OVERRIDEN_DIR ${dir})
+    endif()
+    
     set(component_lib __${prefix}_${component_name})
     set(component_dir ${abs_dir})
     set(component_alias ${prefix}::${component_name}) # The 'alias' of the component library,
@@ -266,10 +253,11 @@ function(__add_scan_component component_dir)
 
     # init the kconfig files 
     __kconfig_component_init(${component_target})
-    # set BUILD_COMPONENT_DIRS build property
+
+    # append BUILD_COMPONENT_DIRS build property
+    idf_build_set_property(SCAN_COMPONENTS_DIR  ${component_dir} APPEND)
     # add all the scan components in the build property 
-    idf_build_set_property(SCAN_COMPONENTS "${component_name}" APPEND)
-    # idf_build_set_property(BUILD_COMPONENT_DIRS ${component_dir} APPEND)
+    idf_build_set_property(SCAN_COMPONENTS ${component_name} APPEND)
 endfunction()
 
 
@@ -280,15 +268,16 @@ endfunction()
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-function(__set_neccessary_components components)
+function(__set_neccessary_components comps)
     
     # get the  components and see if they are present in the 
     # scan components 
     idf_build_get_property(all_comps SCAN_COMPONENTS)
     
     foreach(comps ${components})
-        list(FIND all_comps ${comps} res)
-        if(res EQUAL -1)
+        # list(FIND all_comps ${comps} res)
+        # if(res EQUAL -1)
+        if (NOT ${comps} IN_LIST all_comps )
             message(FATAL_ERROR "can't find the ${comps} in the SCAN components \
                         the components is missing ")
         endif()
@@ -297,9 +286,12 @@ function(__set_neccessary_components components)
     # add the common required components and build components to the path 
     __get_neccessary_components(common_required_components COMMON_REQUIRED)
     
-    idf_build_set_property(BUILD_COMPONENTS "${components}" APPEND)
-    idf_build_set_property(COMMON_REQUIRED_COMPONENT "${common_required_components}" APPEND)
+    idf_build_set_property(BUILD_COMPONENTS "${common_required_components}" APPEND)
     
+    # get the property ad set the components in the parent scope 
+    idf_build_get_property(coms BUILD_COMPONENTS)
+    set(${comps} ${coms} PARENT_SCOPE)
+
 endfunction()
 
 # @name __get_neccessary_components 
@@ -315,29 +307,11 @@ function(__get_neccessary_components components)
     set(option COMMON_REQUIRED)
     cmake_parse_arguments(_ "${option}" "" "" ${ARGN})
 
-    # get the target property of required components
-    set(build_comps  
-            xtensa          spi_flash           esp_rom
-            esp_common      soc                 log
-            driver          esp_hw_support      esp_ringbuf 
-            efuse           mbedtls             esp_timer
-            esp_pm          heap                newlib 
-            esp_system      esp_event           esp_adc
-            esptool_py      partition_table     esp_app_format
-            esp_partition   pthread             app_update
-            bootloader_main bootloader_support  bluetooth 
-            hal             freertos            cxx 
-            # the wifi related components
-            
-            
-    )
-
     # common requierd components that should be linked to all the targets
     set(common_req_comps 
-            esp_common         esp_rom      esp_system
-            log                freertos     newlib
-            xtensa             heap         soc 
-            esp_hw_support     hal          esp_pm
+            cxx newlib freertos esp_hw_support
+            heap log soc hal
+            esp_rom esp_common esp_system
     )
 
     if(BOOTLOADER_BUILD)
@@ -383,7 +357,7 @@ function(target_add_binary_data target embed_file embed_type)
         set(rename_to_arg -D "VARIABLE_BASENAME=${__RENAME_TO}")
     endif()
 
-    idf_build_get_property(cmake_file_path CMAKE_SCRIPTS_PATH)
+    idf_build_get_property(idf_path IDF_PATH)
 
     add_custom_command(OUTPUT "${embed_srcfile}"
         COMMAND "${CMAKE_COMMAND}"
@@ -391,9 +365,9 @@ function(target_add_binary_data target embed_file embed_type)
         -D "SOURCE_FILE=${embed_srcfile}"
         ${rename_to_arg}
         -D "FILE_TYPE=${embed_type}"
-        -P "${cmake_file_path}/scripts/data_file_embed_asm.cmake"
+        -P "${idf_path}/tools/cmake/scripts/data_file_embed_asm.cmake"
         MAIN_DEPENDENCY "${embed_file}"
-        DEPENDS "${cmake_file_path}/scripts/data_file_embed_asm.cmake" ${__DEPENDS}
+        DEPENDS "${idf_path}/tools/cmake/scripts/data_file_embed_asm.cmake" ${__DEPENDS}
         WORKING_DIRECTORY "${build_dir}"
         VERBATIM)
 

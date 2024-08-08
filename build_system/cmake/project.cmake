@@ -29,11 +29,40 @@ list(APPEND CMAKE_MODULE_PATH
 )
 
 
+include(toolchain_file)
+include(build)
+
 include(utility)
 include(ldgen)
-include(build)
+include(kconfig)
+
+
+# include the tools setup for adding the tools 
+include(tools_setup)
 include(target) # target automatically add the toolchain 
-include(components)
+
+include(idf_support)
+
+
+
+
+#======================== there are some TARGET  properties that needs to be included so rest of 
+#  the cmakefiles will fetch for their use 
+
+# cmake scripts paths ,
+# Build component path,
+# sdkconfig file, 
+# sdkconfig defualt file
+# targets 
+# Default target
+# 
+# 
+function(__idf_dummy_target_init)
+    # add a dummy target to store all the releavant information  regarding build
+    add_library(__idf_build_target STATIC IMPORTED GLOBAL) 
+endfunction()
+
+__idf_dummy_target_init()
 
 
 # ==================================================================================================
@@ -105,19 +134,6 @@ macro(project_gen_conf_file config_file config_dir)
     include(${include_file})
 endmacro()
 
-
-# @name project_include_sdkconfig  
-# @param0  sdkconfig
-# @note    this includes the sdkconfig file to the project 
-# @usage   used to generate the sdkconfig file and 
-# @scope  root cmake file   
-# scope tells where should this cmake function used 
-# 
-macro(project_include_sdkconfig_file sdkconfig)
-    # generate the kconfig files and include in the cmake build
-endmacro()
-
-
 # @name project_init
 #   
 # @param0  param0 
@@ -130,10 +146,12 @@ endmacro()
 macro(project_init )
 
     # set the paths and check it  
-    foreach(path ${PATH})
-        if (NOT EXISTS ${path})
-            message(FATAL_ERROR "one of the path ${path} supplied is not exists")
+    foreach(p ${PATH})
+        if (NOT EXISTS "${PATH_${p}}")
+            message(FATAL_ERROR "one of the path ${p} supplied is not exists")
         endif()
+        # also append that path into property 
+        idf_build_set_property(PATH_${p} ${PATH_${p}})
     endforeach()
     
     if(NOT( DEFINED CMAKE_SOURCE_DIR AND  DEFINED CMAKE_BINARY_DIR))
@@ -145,13 +163,24 @@ macro(project_init )
     # set the path vraibles 
     idf_build_set_property(IDF_PATH "${PATH_IDF_PATH}")
     idf_build_set_property(IDF_TOOLS "${PATH_IDF_TOOLS}")
+    idf_build_set_property(SDK_PATH   "${PATH_SDK_PATH}")
     idf_build_set_property(PROJECT_DIR  "${CMAKE_SOURCE_DIR}")
-   
+    idf_build_set_property(BUILD_DIR "${CMAKE_BINARY_DIR}")
+    
+    if (NOT COMPONENTS)
+        message(FATAL_ERROR "no build components are specified for the project ")
+    endif()
+    # set the build components 
+    list(REMOVE_DUPLICATES COMPONENTS)
+    idf_build_set_property(BUILD_COMPONENTS "${COMPONENTS}" APPEND)
+
+    # set the idf path env variable for the prooject  
+    set(ENV{IDF_PATH} ${PATH_IDF_PATH})
+    set(idf_path ${PATH_IDF_PATH})
+
     # turn on the color diagnosistic feature 
     set(CMAKE_COLOR_DIAGNOSTICS ON)
      
-    __idf_dummy_target_init()
-    
     # find the sdkconfig file in the root project directory 
     __find_sdkconfig_file(sdkconfig_file)
     
@@ -161,7 +190,7 @@ macro(project_init )
     tools_init(${target})
     
     # init the enviourment for the target
-    idf_init_process()
+    build_init()
 
     # generate the sdkconfig file and include it in the build process 
     idf_generate_and_add_sdkconfig() 
@@ -187,7 +216,7 @@ function(__find_sdkconfig_file file_out)
         set(sdkconfig_file ${SDKCONFIG})
     else()
         # scan for sdkconfig file in the project source directory 
-        find_file(sdkconfig_file "sdkconfig" HINTS "${CMAKE_SOURCE_DIR}/.." REQUIRED NO_CMAKE_FIND_ROOT_PATH)
+        find_file(sdkconfig_file "sdkconfig" HINTS "${CMAKE_SOURCE_DIR}" REQUIRED NO_CMAKE_FIND_ROOT_PATH)
         
         if(NOT sdkconfig_file)
             message(FATAL_ERROR "sdkconfig file doesn't exist in the \

@@ -1,9 +1,5 @@
 ################################################################################
 # tool_setup.cmake
-#
-# Author: [Himanshu Jangra]
-# Date: [23-Feb-2024]
-#
 # Description:
 #   	setting up the toolset for the project, there are different tools that need to be checked 
 #       when building esp32 programs .
@@ -18,39 +14,6 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
-# =================================================================================================
-# ======================== there are some TARGET  properties that needs to be included so rest of 
-#  the cmakefiles will fetch for their use 
-
-# cmake scripts paths ,
-# Build component path,
-# sdkconfig file, 
-# sdkconfig defualt file
-# targets 
-# Default target
-# 
-# 
-# __build_properties that hold all the properties defined by the rest cmakefiles 
-# 
-
-# @name __idf_dummy_target_init 
-#   
-# @note    used to init the dummy target for the build system
-#           this targets hold all the build regarding properties and stuff   
-# @usage   usage  
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-
-function(__idf_dummy_target_init)
-    # add a dummy target to store all the releavant information  regarding build
-    add_library(__idf_build_target STATIC IMPORTED GLOBAL) 
-endfunction()
-    
-
-
-__idf_dummy_target_init()
-
 # @name tools_inits 
 #   
 # @param0  target  
@@ -60,7 +23,7 @@ __idf_dummy_target_init()
 # scope tells where should this cmake function used 
 # 
 function(tools_init target)
-    message(STATUS "initing the other tools for the Target ${target}")
+    message(STATUS "initing the toolset  for the Target ${target}")
     __tools_find_python()
     __tools_check_python()
 
@@ -88,10 +51,12 @@ function(__tool_find_git)
         return()
     endif()
 
-    set(GIT_STANDARD_PATH "C:\\Program Files\\Git\\cmd")
+    get_target_property(git_path __idf_build_target PATH_GIT)
+    get_target_property(build_dir __idf_build_target BUILD_DIR)
+
     # find the git at the path 
     find_program(git_prog "git" 
-                    PATHS ${GIT_STANDARD_PATH}
+                    PATHS ${git_path}
                     REQUIRED
                     DOC "Git Version managment tool for the IDF repo"
                     NO_DEFAULT_PATH
@@ -106,7 +71,7 @@ function(__tool_find_git)
     set(GIT_VERSION_SUPPORTED 2.33.0)
     # execute the process to find that this python is valid 
     execute_process(COMMAND "${git}" --version
-                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+                    WORKING_DIRECTORY "${build_dir}"
                     RESULT_VARIABLE exec_res_var 
                     OUTPUT_VARIABLE exec_out_var 
                     ERROR_VARIABLE exec_err_var
@@ -121,18 +86,19 @@ function(__tool_find_git)
 
     # Extract the version number from the match
     if( NOT  "${CMAKE_MATCH_1}" STREQUAL "${GIT_VERSION_SUPPORTED}")
-            message(WARNING "not found supported python ${PYTHON_VERSION_SUPPORTED} instead we got python ${CMAKE_MATCH_1}")
+            message(WARNING "not found supported git ${GIT_VERSION_SUPPORTED} instead we got GIT ${CMAKE_MATCH_1}")
     endif()
         
     set(GIT "${git}" CACHE FILEPATH "git version control" )
     # set the git property in the global scope 
     set_property(TARGET __idf_build_target PROPERTY GIT ${git})
-    set_property(TARGET __idf_build_target PROPERTY GIT_EXE_PATH ${GIT_STANDARD_PATH})
+    set_property(TARGET __idf_build_target PROPERTY GIT_EXE_PATH ${git_path})
     
 
 endfunction()
 
 
+# @todo
 function(__tool_check_git_repo)
     
 endfunction()
@@ -156,9 +122,10 @@ function(__tools_find_python )
         return()
     endif()
 
+    get_target_property(py_path __idf_build_target PATH_PYTHON)
     # tools can be found using found program 
     find_program(python_prog  "python" 
-                    PATHS ${PYTHON_STANDARD_PATH}
+                    PATHS ${py_path}
                     # VALIDATOR __python_find_prog_validator validator is not working properly
                     REQUIRED 
                     DOC "python interpreter provided by the ESP-IDF"
@@ -167,7 +134,7 @@ function(__tools_find_python )
     )
 
     if(NOT EXISTS ${python_prog})
-        message(FATAL_ERROR "python program doesn't exist in ${PYTHON_STANDARD_PATH} ")
+        message(FATAL_ERROR "python program doesn't exist in ${py_path} ")
     endif()
 
     get_filename_component(python ${python_prog} NAME)
@@ -194,10 +161,10 @@ function(__tools_find_python )
     endif()
     
     set(PYTHON "${python}" CACHE FILEPATH "Python Interpreter for ESP-IDF" )
-    set(PYTHON_EXE_PATH ${PYTHON_STANDARD_PATH} CACHE FILEPATH "python standard filepath ")
+    set(PYTHON_EXE_PATH ${py_path} CACHE FILEPATH "python standard filepath ")
     # set the python property in the global scope 
     set_property(TARGET __idf_build_target PROPERTY PYTHON ${python})
-    set_property(TARGET __idf_build_target PROPERTY PYTHON_EXE_PATH ${PYTHON_STANDARD_PATH})
+    set_property(TARGET __idf_build_target PROPERTY PYTHON_EXE_PATH ${py_path})
 
 endfunction()
 
@@ -242,8 +209,10 @@ endfunction()
 # scope tells where should this cmake function used 
 # 
 function(__tool_find_ccache)  
+
+    get_target_property(ccache_path __idf_build_target PATH_CCACHE)
     find_program(ccache_prog "ccache"
-                        PATHS "C:\\Program Files (x86)\\idf-tools\\tools\\ccache\\4.8\\ccache-4.8-windows-x86_64"
+                        PATHS ${ccache_path}
                         REQUIRED
                         DOC "ccache program for faster compilation of the project"
                         NO_DEFAULT_PATH 

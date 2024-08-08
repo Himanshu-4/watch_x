@@ -1,9 +1,6 @@
 ################################################################################
 # toolchain_file.cmake
 #
-# Author: [Himanshu Jangra]
-# Date: [23-Feb-2024]
-#
 # Description:
 #   	toolchain file for the esp targets there are certain targets but for now we only 
 #       using esp32 target .
@@ -23,6 +20,7 @@ cmake_minimum_required(VERSION 3.2.1)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
 
+set(CMAKE_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
 
 # @name toolchain_init 
 #    
@@ -59,12 +57,8 @@ endmacro()
 # scope tells where should this cmake function used 
 # 
 macro(__target_set_toolchain target)
-    
-    # get the path "cmake scripts path" from the __idf_build_target property  
-    idf_build_get_property(cmake_scripts_path CMAKE_SCRIPTS_PATH)
 
-    set(cmake_scripts_path "${cmake_scripts_path}/toolchains")
-    file(TO_CMAKE_PATH   "${cmake_scripts_path}" cmake_scripts_path)
+    set(cmake_scripts_path "${CMAKE_CURRENT_DIR}/toolchains")
 
     # find the toolchain file in the path 
     find_file(toolchain_file "toolchain-${target}.cmake" PATHS "${cmake_scripts_path}"  REQUIRED )
@@ -463,6 +457,17 @@ function(__toolchain_flags_init target)
     idf_build_set_property(CXX_COMPILE_OPTIONS "${cxx_compile_options}" APPEND)
     idf_build_set_property(ASM_COMPILE_OPTIONS "${asm_compile_options}" APPEND)
     idf_build_set_property(LINK_OPTIONS "${link_options}" APPEND)
+
+
+    
+    remove_duplicated_flags("-mlongcalls ${CMAKE_C_FLAGS}" UNIQ_CMAKE_C_FLAGS)
+    set(CMAKE_C_FLAGS "${UNIQ_CMAKE_C_FLAGS}" CACHE STRING "C Compiler Base Flags" FORCE)
+    remove_duplicated_flags("-mlongcalls ${CMAKE_CXX_FLAGS}" UNIQ_CMAKE_CXX_FLAGS)
+    set(CMAKE_CXX_FLAGS "${UNIQ_CMAKE_CXX_FLAGS}" CACHE STRING "C++ Compiler Base Flags" FORCE)
+    remove_duplicated_flags("-mlongcalls ${CMAKE_ASM_FLAGS}" UNIQ_CMAKE_ASM_FLAGS)
+    set(CMAKE_ASM_FLAGS "${UNIQ_CMAKE_ASM_FLAGS}" CACHE STRING "ASM Compiler Base Flags" FORCE)
+
+
 
 
     message(STATUS "compile options ${compile_options} ")

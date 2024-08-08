@@ -17,7 +17,6 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
-
 # -------------------------------------------------------------------------------------
 # ------------------- include the root level cmake file --------------------------------
 include(build_system/cmake/project.cmake)
@@ -26,19 +25,19 @@ include(build_system/cmake/project.cmake)
 # read the root level configuration file, set the cache varaible that are defined in the config file
 project_gen_conf_file("project_config.conf"  "${CMAKE_CURRENT_LIST_DIR}/src/configs")
 
+# this intialisation will do a lot of thing , tools init, generate kconfig,
+#  toolchian init,init other low level modules
 project_init()
 
-message(STATUS "COMPOENETS are --> ${BUILD_COMPONENTS}")
+# this init the build process,  generate components targets, include the project include of other files 
+idf_build_process_init()
 
 # from the kconfig generator, build a rough estimation of the project by including the components dir 
 # and their kconfig file for project configurations 
-# project_include_components(${BUILD_COMPONENTS})
-
+project_include_components(${COMPONENTS})
 
 # create a project 
-project(${NAME} VERSION "1.0.0")
-
-
+project(${PROJECT_NAME} VERSION ${PROJECT_VERSION})
 
 set(kernel_target watch_x_kernel)
 # create a build file for the project (this is target that has a direct dependency with upload )

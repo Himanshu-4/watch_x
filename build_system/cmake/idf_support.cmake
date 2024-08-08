@@ -1,9 +1,6 @@
 ################################################################################
 # idf_support.cmake
 #
-# Author: [Himanshu Jangra]
-# Date: [27-Feb-2024]
-#
 # Description:
 #   	this file contains the idf commands used to build a component target or the 
 #       whole project .
@@ -17,6 +14,7 @@
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
 
+cmake_policy(SET CMP0057 NEW)
 
 # include the components.cmake file into the build 
 include(comps)
@@ -33,23 +31,6 @@ include(comps)
 # ========================================================================================================
 # ========================================================================================================
 
-# @name idf_init_process 
-#   
-# @note    init the build process by setting the flags    
-# @usage   usage  
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-function(idf_init_process)
-
-    # build init will init the basic compiler flags and 
-    build_init()
-  
-    # init the root level kconfig 
-    kconfig_root_init()
-    
-endfunction()
-
 
 
 # @name idf_generate_sdkconfig 
@@ -62,40 +43,47 @@ endfunction()
 macro(idf_generate_and_add_sdkconfig)
     
     # find the components that we have to include  in the build 
-    idf_build_get_property(comps_path BUILD_COMPONENTS_PATH)
+    idf_build_get_property(sdk_path SDK_PATH)
+    idf_build_get_property(build_dir BUILD_DIR)
+
+    idf_build_get_property(prefix __PREFIX)
+    if (NOT prefix)
+        message(FATAL_ERROR "the prefix is not defined in property ")
+    endif()
 
     # scan all the components in the component directory 
     # and make their component target so menuconfig can find kconfig files 
-    __scan_components( ${comps_path})
+    __scan_components( ${sdk_path} ${prefix})
      
-    # get the neccessary components from the comp_commands.json
-    __get_neccessary_components(build_components)
+
+    # set the neccesaary components 
+    __set_neccessary_components(build_components)
+
+    # show the build components 
+    message(STATUS "build components are ${build_components}")
     
     # now add the build components to the kconfig generator 
     # generate the sdkconfigs from gathers kconfigs*
     if(NOT BOOTLOADER_BUILD)
         # we are not generating sdkconfig files when building bootloader
-        message(STATUS "=================== start generating kconfig  \
-            files and processing components =============================")
+        message(STATUS "=================== start generating kconfig files and processing components =============================")
         kconfig_generate_config("${build_components}" GENERATE_SDKCONFIG)
         
     endif()
 
-    # searching for the sdkconfig.cmake file 
-    set(config_dir "")
     # check if config directorty is defined in the cmake arguments 
     if(CONFIG_DIR)
         set(config_dir ${CONFIG_DIR})
 
     else()
-        set(config_dir "${CMAKE_BINARY_DIR}/config")
+        set(config_dir "${build_dir}/config")
     endif()
 
     find_file(sdkconfig_cmake "sdkconfig.cmake"
-    HINTS  "${config_dir}"
-    NO_CACHE
-    NO_CMAKE_FIND_ROOT_PATH
-    )
+                HINTS  "${config_dir}"
+                NO_CACHE
+                NO_CMAKE_FIND_ROOT_PATH
+                )
 
     if(sdkconfig_cmake)
         message(STATUS "Adding the  ${sdkconfig_cmake} file to the build ")
@@ -109,7 +97,6 @@ macro(idf_generate_and_add_sdkconfig)
 
 endmacro()
 
-
 # @name idf_fetch_components 
 #   
 # @note    used to build the components that idf found in build_compos path and 
@@ -120,15 +107,9 @@ endmacro()
 # scope tells where should this cmake function used 
 # 
 macro(idf_add_components )
-    
-    # # scan all the components in the component directory 
-    # # and make their component target so menuconfig can find kconfig files 
-    # __scan_components( ${comps_path})
-     
     # get the neccessary components from the comp_commands.json
     __get_neccessary_components(build_components)
     
-
     # specify the components that have a project_include.cmake file 
     set(comps 
                 partition_table 
