@@ -58,10 +58,14 @@ endmacro()
 # 
 macro(__target_set_toolchain target)
 
-    set(cmake_scripts_path "${CMAKE_CURRENT_DIR}/toolchains")
+    set(cmake_scripts_path "${CMAKE_CURRENT_DIR}")
 
     # find the toolchain file in the path 
-    find_file(toolchain_file "toolchain-${target}.cmake" PATHS "${cmake_scripts_path}"  REQUIRED )
+    find_file(toolchain_file "toolchain-${target}.cmake"
+                PATHS "${cmake_scripts_path}"
+                REQUIRED
+                NO_CMAKE_FIND_ROOT_PATH
+                NO_CMAKE_DEFAULT_PATH )
     
     # Finally, set TOOLCHAIN_FILE in cache
     set(TOOLCHAIN_FILE ${toolchain_file} CACHE STRING "IDF Build Toolchain FILE")
@@ -74,7 +78,7 @@ macro(__target_set_toolchain target)
 
         # check if this variables is defined before 
         # match the toolchain file with the input target 
-        if(NOT("${exist_toolchain_file}" MATCHES "${our_toolchain_file}"))
+        if(NOT("${exist_toolchain_file}" STREQUAL "${our_toolchain_file}"))
             message(FATAL_ERROR "toolchain file mismatches Function toolchain file ${our_toolchain_file}
                     Existing toolchain file ${exist_toolchain_file} ")
         endif()
@@ -188,9 +192,6 @@ macro(__target_check_toolchain target)
     message(STATUS "C standard = ${C_COMPILER_STANDARD}  CXX standard = ${CXX_COMPILER_STANDARD}" )
     set(CMAKE_C_STANDARD ${C_COMPILER_STANDARD})
     set(CMAKE_CXX_STANDARD ${CXX_COMPILER_STANDARD})
-
-
-
 endmacro()
 
 
@@ -249,6 +250,9 @@ function(__toolchain_flags_init target)
     if(BOOTLOADER_BUILD)
         if(CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_SIZE )
             list(APPEND compile_options  "-Os")
+            if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+                list(APPEND compile_options "-freorder-blocks")
+            endif()
         elseif(CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_DEBUG)
             list(APPEND compile_options  "-Og")
         elseif(CONFIG_BOOTLOADER_COMPILER_OPTIMIZATION_PERF)
@@ -259,6 +263,9 @@ function(__toolchain_flags_init target)
     else()
         if(CONFIG_COMPILER_OPTIMIZATION_SIZE)
             list(APPEND compile_options "-Os")
+            if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+                list(APPEND compile_options "-freorder-blocks")
+            endif()
         elseif(CONFIG_COMPILER_OPTIMIZATION_DEFAULT)
             list(APPEND compile_options "-Og")
         elseif(CONFIG_COMPILER_OPTIMIZATION_NONE)
@@ -267,16 +274,6 @@ function(__toolchain_flags_init target)
             list(APPEND compile_options "-O2")
         endif()
 
-    endif()
-
-    
-    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
-        # This flag is GCC-specific.
-        # Not clear yet if some other flag should be used for Clang.
-        list(APPEND compile_options "-freorder-blocks" 
-                        "-fno-tree-switch-conversion"
-                        "-fstrict-volatile-bitfields")
-        
     endif()
 
     if(CONFIG_COMPILER_CXX_EXCEPTIONS)
@@ -304,7 +301,8 @@ function(__toolchain_flags_init target)
     if(CONFIG_COMPILER_OPTIMIZATION_ASSERTIONS_DISABLE)
         list(APPEND compile_definitions "-DNDEBUG")
     endif()
-
+    
+    # stack protactor 
     if(CONFIG_COMPILER_STACK_CHECK_MODE_NORM)
         list(APPEND compile_options "-fstack-protector")
     elseif(CONFIG_COMPILER_STACK_CHECK_MODE_STRONG)
@@ -317,10 +315,11 @@ function(__toolchain_flags_init target)
         list(APPEND compile_options "-fdump-rtl-expand")
     endif()
 
-    # if(NOT ${CMAKE_C_COMPILER_VERSION} VERSION_LESS 8.0.0)
-    if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
-        list(APPEND compile_options "-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=."
-                                    "-fmacro-prefix-map=${idf_path}=/IDF")
+    if(NOT ${CMAKE_C_COMPILER_VERSION} VERSION_LESS 8.0.0)
+        if(CONFIG_COMPILER_HIDE_PATHS_MACROS)
+            list(APPEND compile_options "-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=."
+                                        "-fmacro-prefix-map=${idf_path}=/IDF")
+        endif()
     endif()
 
     if(CONFIG_APP_REPRODUCIBLE_BUILD)
@@ -355,7 +354,8 @@ function(__toolchain_flags_init target)
             list(GET result ${index} after)
             list(APPEND compile_options "-fdebug-prefix-map=${folder}=${after}")
         endforeach()
-    endif()
+    endif() # reporducible build
+
 
     if(CONFIG_COMPILER_DISABLE_GCC12_WARNINGS)
         list(APPEND compile_options "-Wno-address"
@@ -388,6 +388,17 @@ function(__toolchain_flags_init target)
     # to be placed in IRAM
     list(APPEND compile_options "-fno-jump-tables")
     
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU")
+        # This flag is GCC-specific.
+        # Not clear yet if some other flag should be used for Clang.
+        list(APPEND compile_options "-fno-tree-switch-conversion"
+                        "-fstrict-volatile-bitfields"
+                        "-Wno-old-style-declaration"
+                        "-Wno-error=unused-but-set-variable")
+        
+    endif()
+
+
     # Clang finds some warnings in IDF code which GCC doesn't.
     # All these warnings should be fixed before Clang is presented
     # as a toolchain choice for users.
@@ -446,10 +457,11 @@ function(__toolchain_flags_init target)
     # message(STATUS "cmake c known features ${c_fet}")
 
     
-    list(APPEND c_compile_options "${compile_options}")
-    list(APPEND cxx_compile_options "${compile_options}")
-    list(APPEND asm_compile_options "${compile_options}")
-    
+    list(APPEND c_compile_options "${compile_options}" "-mlongcalls")
+    list(APPEND cxx_compile_options "${compile_options}" "-mlongcalls")
+    list(APPEND asm_compile_options "${compile_options}" "-mlongcalls")
+    list(APPEND link_options "-mlongcalls")
+
     idf_build_set_property(COMPILE_DEFINITIONS "${compile_definitions}" APPEND)
 
     idf_build_set_property(COMPILE_OPTIONS "${compile_options}" APPEND)
@@ -458,13 +470,10 @@ function(__toolchain_flags_init target)
     idf_build_set_property(ASM_COMPILE_OPTIONS "${asm_compile_options}" APPEND)
     idf_build_set_property(LINK_OPTIONS "${link_options}" APPEND)
 
-
     
-    remove_duplicated_flags("-mlongcalls ${CMAKE_C_FLAGS}" UNIQ_CMAKE_C_FLAGS)
+    
     set(CMAKE_C_FLAGS "${UNIQ_CMAKE_C_FLAGS}" CACHE STRING "C Compiler Base Flags" FORCE)
-    remove_duplicated_flags("-mlongcalls ${CMAKE_CXX_FLAGS}" UNIQ_CMAKE_CXX_FLAGS)
     set(CMAKE_CXX_FLAGS "${UNIQ_CMAKE_CXX_FLAGS}" CACHE STRING "C++ Compiler Base Flags" FORCE)
-    remove_duplicated_flags("-mlongcalls ${CMAKE_ASM_FLAGS}" UNIQ_CMAKE_ASM_FLAGS)
     set(CMAKE_ASM_FLAGS "${UNIQ_CMAKE_ASM_FLAGS}" CACHE STRING "ASM Compiler Base Flags" FORCE)
 
 

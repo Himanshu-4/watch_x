@@ -29,12 +29,12 @@ project_gen_conf_file("project_config.conf"  "${CMAKE_CURRENT_LIST_DIR}/src/conf
 #  toolchian init,init other low level modules
 project_init()
 
-# this init the build process,  generate components targets, include the project include of other files 
-idf_build_process_init()
-
 # from the kconfig generator, build a rough estimation of the project by including the components dir 
 # and their kconfig file for project configurations 
-project_include_components(${COMPONENTS})
+project_include_components()
+
+# this init the build process,  generate components targets, include the project include of other files 
+idf_build_process_init()
 
 # create a project 
 project(${PROJECT_NAME} VERSION ${PROJECT_VERSION})

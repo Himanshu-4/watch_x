@@ -32,6 +32,9 @@ list(APPEND CMAKE_MODULE_PATH
 include(toolchain_file)
 include(build)
 
+# include the esptool_py script  
+include(esptool_py)
+
 include(utility)
 include(ldgen)
 include(kconfig)
@@ -102,7 +105,10 @@ function(__execute_config_python_script config_file out_file)
     else()
         message(FATAL_ERROR "Python script failed with error: ${error}")
     endif()
-        
+    
+    # set the property to cmake configure depends
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${config_file}")
+
 endfunction()
 
 
@@ -175,9 +181,9 @@ macro(project_init )
     idf_build_set_property(BUILD_COMPONENTS "${COMPONENTS}" APPEND)
 
     # set the idf path env variable for the prooject  
+    set(IDF_PATH ${PATH_IDF_PATH} CACHE FILEPATH "esp idf path ")
     set(ENV{IDF_PATH} ${PATH_IDF_PATH})
     set(idf_path ${PATH_IDF_PATH})
-
     # turn on the color diagnosistic feature 
     set(CMAKE_COLOR_DIAGNOSTICS ON)
      
@@ -234,3 +240,15 @@ function(__find_sdkconfig_file file_out)
     idf_build_set_property(SDKCONFIG_DEFAULT "")
 
 endfunction()
+
+# @name project_include_components 
+#   
+# @note    Note   
+# @usage   used to include the project_includes.cmake files in the build  
+# @scope  scope   
+# scope tells where should this cmake function used 
+# 
+macro(project_include_components)
+    idf_include_components()
+endmacro()
+

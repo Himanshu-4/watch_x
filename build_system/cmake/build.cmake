@@ -281,22 +281,11 @@ function(__build_set_default_build_flags)
     
     # set the compiler flags for all the build compopnents in the directory z
     idf_build_set_property(COMPILE_DEFINITIONS "${compile_definitions}" APPEND)
-    idf_build_set_property(COMPILE_OPTIONS "${compile_flags}" APPEND)
-    idf_build_set_property(COMPILE_OPTIONS "-Wno-old-style-declaration" APPEND)        
+    idf_build_set_property(COMPILE_OPTIONS "${compile_flags}" APPEND)      
     
     idf_build_set_property(C_COMPILE_OPTIONS "${compile_flags}" APPEND)
-    idf_build_set_property(C_COMPILE_OPTIONS "-Wno-old-style-declaration" APPEND)
-    
     idf_build_set_property(CXX_COMPILE_OPTIONS "${compile_flags}" APPEND)
     idf_build_set_property(ASM_COMPILE_OPTIONS "${compile_flags}" APPEND)
-    
-
-    # append the compile flags 
-    list(APPEND CMAKE_C_FLAGS "${compile_flags}")
-    list(APPEND CMAKE_CXX_FLAGS "${compile_flags}")
-
-    list(REMOVE_DUPLICATES CMAKE_C_FLAGS)
-    list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
 
 endfunction()
 
@@ -312,7 +301,14 @@ endfunction()
 function(__build_set_defaults_prop)
     idf_build_set_property(__PREFIX idf)
 
+    idf_build_get_property(build_dir BUILD_DIR)
+    # also generate a build components dir in build dir 
+    file(MAKE_DIRECTORY "${build_dir}/components")
 
+    # set the env fpga to false, as we are not building for fpga enviourment  
+    set(ENV{IDF_ENV_FPGA} 0)
+    
+    idf_build_set_property(__IDF_ENV_FPGA 0)
     # the c standard is defined in the toolchain file but we can override it here according 
     # to specified in the sdkconfig.cmake file 
     # get the build standard property 

@@ -28,9 +28,7 @@ cmake_policy(SET CMP0057 NEW)
 #                   instead of actual value
 function(idf_component_get_property var component property)
     cmake_parse_arguments(_ "GENERATOR_EXPRESSION" "" "" ${ARGN})
-    
     __component_get_target(component_target ${component})
-    
     if(__GENERATOR_EXPRESSION)
         set(val "$<TARGET_PROPERTY:${component_target},${property}>")
     else()
@@ -38,6 +36,7 @@ function(idf_component_get_property var component property)
     endif()
     set(${var} "${val}" PARENT_SCOPE)
 endfunction()
+
 
 # idf_component_set_property
 #
@@ -128,26 +127,33 @@ function(__component_get_target target_out name_or_alias)
     idf_build_get_property(prefix __PREFIX)
     # check if the name is present in the component_targets
     
-    string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" component_name ${name_or_alias})    
-
+    # string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" component_name ${name_or_alias})    
+    string(REGEX REPLACE "^(.*_)*idf_?(::)?([^_]+)([_-]?.*)?$" "\\3\\4" component_name ${name_or_alias})
+    
     set(component_target ___${prefix}_${component_name})
  
     # if target not found in __COMPONENT_TARGETS , show warning 
     if (NOT ${component_target} IN_LIST component_targets)
         # show the warning to the user 
-        message(WARNING "component target ${component_target} is not found in the component_target list")
+        message(FATAL_ERROR "component target ${component_target} is not found in the component_target list")
     endif()
 
     set(${target_out} ${component_target} PARENT_SCOPE)
 
-    # # List of input strings
-    # set(input_strings "___idf_soc;__idf_esp_log;idf_nvs;_idfspi_flash;idf::newlib;idf_bt;esp_system;esp_wifi")
+    # # # List of input strings
+    # set(input_strings "___idf_soc;__idf_esp_log;idf_nvs;_idfspi_flash;idf::newlib;idf_bt;esp_system;esp_wifi;esp-tls;lwip;idf::esp-tls, __idf_::esp-tls, __idf_esp-tls")
 
     # # Loop through each item in the list
     # foreach(item ${input_strings})
+
     #     # Extract the name using a regular expression that includes idf
-    #     string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" name "${item}")
-    #     message(STATUS "Extracted name: ${name}")
+    #     # string(REGEX REPLACE ".*${prefix}[_:]*([a-zA-Z_]+)$" "\\1" name "${item}")
+    #       # Remove all prefixes like "___idf", "__idf", "_idf", "idf::", "idf"
+    #     string(REGEX REPLACE "^(.*_)*idf_?(::)?([^_]+)([_-]?.*)?$" "\\3\\4" cleaned_item "${item}")
+    
+    #     # Replace "_" with "-" if needed
+    #     # string(REGEX REPLACE "_" "-" cleaned_item "${cleaned_item}")
+    #     message(STATUS "Extracted name: ${cleaned_item}")
     # endforeach()
 
     # # exit here 
@@ -160,7 +166,7 @@ endfunction()
 # ===========================     Function to scan the all the components present in the component dir 
 # this will help us to attach the basic properties to that component without including in the build 
 
-# @name __add_component 
+# @name __scan_component 
 #   
 # @param0  comps_path 
 # @note    used to add the components in the build 
@@ -293,6 +299,46 @@ function(__set_neccessary_components comps)
     set(${comps} ${coms} PARENT_SCOPE)
 
 endfunction()
+
+
+# @name component_depends_include 
+#   
+# @param0  components 
+# @note    used to include the component (project_include.cmake files )
+# @usage   the project_include.cmake files should be included in early expansion of 
+#           components as some comps are depend on them like esptoolpy partition_table etc 
+#           they have interconnected dependecy that need to be resolved first   
+# @scope  scope   
+# scope tells where should this cmake function used 
+# 
+macro(__include_project_cmake_files  components)
+    idf_build_get_property(sdk_path SDK_PATH) 
+
+    # Make each build property available as a read-only variable
+    idf_build_get_property(build_properties __BUILD_PROPERTIES)
+    foreach(build_property ${build_properties})
+        idf_build_get_property(val ${build_property})
+        set(${build_property} "${val}")
+    endforeach()
+
+    list(SORT components)
+    foreach(comp ${components})
+        # get the component target 
+        __component_get_target(component_target ${comp})
+        __component_get_property(dir ${component_target} COMPONENT_DIR)
+        __component_get_property(_name ${component_target} COMPONENT_NAME)
+        set(COMPONENT_NAME ${_name})
+        set(COMPONENT_DIR ${dir})
+        set(COMPONENT_PATH ${dir})  # this is deprecated, users are encouraged to use COMPONENT_DIR;
+                                    # retained for compatibility
+        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
+            # include the project include.cmake file
+            message(STATUS "Adding project.cmake file from ${comp}")
+            include(${COMPONENT_DIR}/project_include.cmake)
+        endif()
+    endforeach()
+    
+endmacro()
 
 # @name __get_neccessary_components 
 #   

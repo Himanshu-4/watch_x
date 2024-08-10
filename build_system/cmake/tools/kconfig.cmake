@@ -274,6 +274,7 @@ function(kconfig_generate_config  build_components)
         COMMAND ${prepare_kconfig_files_command}
         COMMAND ${kconfgen_basecommand}
         --env "IDF_TARGET=${idf_target}"
+        --env "IDF_PATH=${idf_path}"
         --env "IDF_ENV_FPGA=${idf_env_fpga}"
         --dont-write-deprecated
         --output config ${sdkconfig}
@@ -290,6 +291,7 @@ function(kconfig_generate_config  build_components)
         # compatibility)
         COMMAND ${kconfgen_basecommand}
         --env "IDF_TARGET=${idf_target}"
+        --env "IDF_PATH=${idf_path}"
         --env "IDF_ENV_FPGA=${idf_env_fpga}"
         --output config ${sdkconfig}
         )

@@ -91,39 +91,24 @@ macro(idf_generate_and_add_sdkconfig)
         include(${sdkconfig_cmake_file})
     else()
         message(STATUS "searching for sdkconfig cmake in ${config_dir}")
-        message(WARNING "Failed to f \
-            ind sdkconfig.cmake file, project may build with incorrect configuration")
+        message(FATAL_ERROR "Failed to find sdkconfig.cmake file")
     endif()
 
 endmacro()
 
-# @name idf_fetch_components 
+# @name idf_include_components
 #   
-# @note    used to build the components that idf found in build_compos path and 
+# @note    used to build the s components that idf found in build_compos path and 
 #           that are required for by the project, otherwise unneccessary components 
 #           don't get included in the build, this only includes the component
 # @usage   usage  
 # @scope  scope   
 # scope tells where should this cmake function used 
 # 
-macro(idf_add_components )
-    # get the neccessary components from the comp_commands.json
-    __get_neccessary_components(build_components)
-    
-    # specify the components that have a project_include.cmake file 
-    set(comps 
-                partition_table 
-                esptool_py )
-    __add_component_includes("${comps}")
+macro(idf_include_components)
 
-    # add the neccessary components in the build and also set the 
-    # build_components property  
-    __set_neccessary_components("${build_components}")
-
-    # show the build components to the users , also show the target name
-    # always pass list within double quotes
-    __show_build_component("${build_components}" SHOW_WITH_TARGETS)
-
+    idf_build_get_property(build_comps BUILD_COMPONENTS)
+    __include_project_cmake_files("${build_comps}")
 endmacro()
 
 
@@ -136,7 +121,7 @@ endmacro()
 # @scope  root file    
 # scope tells where should this cmake function used 
 # 
-macro(idf_build_process_start )
+macro(idf_build_process_init )
     
     # Generate compile_commands.json (needs to come after project call).
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -158,10 +143,31 @@ endmacro()
 # 
 function(__idf_build_start_process)
  
-    # add the subdirectory from the build component path 
-    idf_build_get_property(build_path BUILD_COMPONENTS_PATH)
-    set(comps_build_dir "${CMAKE_BINARY_DIR}/components")
-    add_subdirectory(${build_path} ${comps_build_dir})
+    idf_build_get_property(build_dir BUILD_DIR)
+
+    set(comps_build_dir "${build_dir}/components")
+
+    idf_build_get_property(build_comps BUILD_COMPONENTS)
+    list(REMOVE_DUPLICATES build_comps)
+    
+    idf_build_get_property(prefix __PREFIX)
+    # Add each component as a subdirectory, processing each component's CMakeLists.txt
+    foreach(component ${build_comps})
+        # get the component target from component 
+        __component_get_target(component_target ${component})
+        __component_get_property(dir ${component_target} COMPONENT_DIR)
+        __component_get_property(_name ${component_target} COMPONENT_NAME)
+        __component_get_property(alias ${component_target} COMPONENT_ALIAS)
+        set(COMPONENT_NAME ${_name})
+        set(COMPONENT_DIR ${dir})
+        set(COMPONENT_PATH ${dir}) # for backward compatibility only, COMPONENT_DIR is preferred
+        set(COMPONENT_ALIAS ${alias})
+        set(__idf_component_context 1)
+        message(STATUS "adding component ${_name}")
+        add_subdirectory(${dir} "${comps_build_dir}/${_name}")
+        set(__idf_component_context 0)
+    endforeach()
+
 
     #  the test_compoenets is empty 
     # __project_info("${test_components}")
