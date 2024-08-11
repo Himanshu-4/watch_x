@@ -1,11 +1,11 @@
 ################################################################################
-# esptool_py.cmake
+# kernel.cmake
 #
 # Author: [Himanshu Jangra]
-# Date: [10-Aug-2024]
+# Date: [10-august-2024]
 #
 # Description:
-#   	the esptool_py functionalities to use and work with other components .
+#   	Descriptoin of the file.
 #
 # Notes:
 #       Please dont modify existing CMAKE function and commands unless highly required 
@@ -15,5 +15,3 @@
 # [Contents of the file below]
 # check for minimum cmake version to run this script
 cmake_minimum_required(VERSION 3.2.1)
-
-

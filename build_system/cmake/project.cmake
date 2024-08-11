@@ -32,9 +32,6 @@ list(APPEND CMAKE_MODULE_PATH
 include(toolchain_file)
 include(build)
 
-# include the esptool_py script  
-include(esptool_py)
-
 include(utility)
 include(ldgen)
 include(kconfig)
@@ -172,6 +169,7 @@ macro(project_init )
     idf_build_set_property(SDK_PATH   "${PATH_SDK_PATH}")
     idf_build_set_property(PROJECT_DIR  "${CMAKE_SOURCE_DIR}")
     idf_build_set_property(BUILD_DIR "${CMAKE_BINARY_DIR}")
+    idf_build_set_property(SRC_CONFIG_DIR "${PATH_SRC_CONFIG_DIR}")
     
     if (NOT COMPONENTS)
         message(FATAL_ERROR "no build components are specified for the project ")
@@ -187,6 +185,11 @@ macro(project_init )
     # turn on the color diagnosistic feature 
     set(CMAKE_COLOR_DIAGNOSTICS ON)
      
+    # set the project related properties 
+    idf_build_set_property(PROJECT_VER  ${PROJECT_VERSION})
+    idf_build_set_property(PROJECT_NAME ${PROJECT_NAME})
+
+
     # find the sdkconfig file in the root project directory 
     __find_sdkconfig_file(sdkconfig_file)
     

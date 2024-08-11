@@ -62,6 +62,18 @@ set(kernel_target watch_x_kernel)
 # create the flash target for the above build target 
 # project_add_flash_target()
 
+# adding the subdirectory of below executbale and libraries 
+add_subdirectory(src/kernel)
+
+# add bootloader target
+add_subdirectory(src/bootloader)
+
+# add application target 
+add_subdirectory(src/application)
+
+# add ulp target 
+add_subdirectory(src/ulp)
+
 # /------------============================---------------------------------===============================--------
 # =============------------------=========== same way you can create other targets ==================-----------
 
