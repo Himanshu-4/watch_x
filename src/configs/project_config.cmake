@@ -31,14 +31,14 @@ set(FLASH
 set(COMPILER_DEFINATION 
 	-Wall	)
 set(COMPILER_C_OPTIONS 
-	-Wall	-Werror	)
+	-Wall	-Werror	-warwaadf	)
 set(COMPILER_CXX_OPTIONS 
-	-Wall	-Werror	-fnortti	)
+	sadfafd	-Wall	-Werror	-fnortti	)
 set(COMPILER_ASM_OPTIONS 
 	-O0	)
 set(COMPILER 
 	DEFINATION	C_OPTIONS	CXX_OPTIONS	ASM_OPTIONS	)
 set(COMPONENTS 
-	app_update	bootloader_support	bt	console	cxx	driver	efuse	esp_adc	esp_app_format	esp_common	esp_event	esp_gdbstub	esp_hw_support	esp_partition	esp_phy	esp_pm	esp_psram	esp_ringbuf	esp_rom	esp_system	esp_timer	esp_wifi	esp-tls	espcoredump	fatfs	freertos	hal	heap	log	lwip	mbedtls	newlib	nvs_flash	partition_table	pthread	riscv	soc	spi_flash	ulp	usb	wear_levelling	wifi_provisioning	wpa_supplicant	xtensa	)
+	app_update	bootloader_support	bt	console	cxx	driver	efuse	esp_adc	esp_app_format	esp_common	esp_event	esp_gdbstub	esp_hw_support	esp_lcd	esp_netif	esp_partition	esp_phy	esp_pm	esp_psram	esp_ringbuf	esp_rom	esp_system	esp_timer	esp_wifi	esp-tls	espcoredump	fatfs	esptool_py	freertos	hal	heap	log	lwip	mbedtls	newlib	nvs_flash	partition_table	pthread	riscv	soc	spi_flash	ulp	vfs	usb	wear_levelling	wifi_provisioning	wpa_supplicant	xtensa	)
 set(PARTITIONS 
 	ota_metadata>0x20,data	ble_nvs>0x22,data	ota1>0x30,app	ota2>0x40,app	file>0x50,data	)

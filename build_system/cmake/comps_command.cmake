@@ -190,11 +190,16 @@ function(__scan_components sdk_path prefix)
         __add_individual_component("${component_dir}" ${prefix})
     endforeach()
 
+    # also add the bootloader component 
+    if(NOT EXISTS "${sdk_path}/bootloader")
+        message(FATAL_ERROR "bootloader not present in the ${sdk_path} need bootloader")
+    endif()
+    message(STATUS "Adding bootloader kconfig files")
+    get_filename_component(bootloader_path "${sdk_path}/bootloader" ABSOLUTE)
+    __kconfig_bootloader_component_add("${bootloader_path}")
     
     idf_build_get_property(scan SCAN_COMPONENTS)
-    message(STATUS "------------------------------scan compoents are below-------------------------------\r\n${scan}\r\n-------------------------------------------------------------------------------------------------------")
-
-    
+    message(STATUS "------------------------------scan compoents are below-------------------------------\r\n${scan}\r\n-------------------------------------------------------------------------------------------------------")    
 endfunction()
 
 #

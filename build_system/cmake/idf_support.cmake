@@ -56,6 +56,8 @@ macro(idf_generate_and_add_sdkconfig)
     __scan_components( ${sdk_path} ${prefix})
      
 
+    # have to add the bootloader kconfig files also 
+
     # set the neccesaary components 
     __set_neccessary_components(build_components)
 

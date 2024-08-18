@@ -45,8 +45,6 @@ set(CMAKE_EXECUTABLE_SUFFIX_ASM   .o)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX   .o)
 set(CMAKE_EXECUTABLE_SUFFIX .elf)
 
-# build only the static library for the projects
-set(BUILD_SHARED_LIBS OFF)
 
 # cmake find_<types> inclusion of the certain paths in finding the <types> files 
 set(CMAKE_FIND_ROOT_PATH ${Compiler_path})

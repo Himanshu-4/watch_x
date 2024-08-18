@@ -71,7 +71,7 @@ function(idf_component_register)
     idf_build_get_property(c_compile_options C_COMPILE_OPTIONS GENERATOR_EXPRESSION)
     idf_build_get_property(cxx_compile_options CXX_COMPILE_OPTIONS GENERATOR_EXPRESSION)
     idf_build_get_property(asm_compile_options ASM_COMPILE_OPTIONS GENERATOR_EXPRESSION)
-    idf_build_get_property(common_reqs ___COMPONENT_REQUIRES_COMMON)
+    idf_build_get_property(common_reqs __COMPONENT_REQUIRES_COMMON)
 
     include_directories("${include_directories}")
     add_compile_options("${compile_options}")
@@ -88,9 +88,16 @@ function(idf_component_register)
     add_compile_options("${compile_definitions}")
 
     if(common_reqs) # check whether common_reqs exists, this may be the case in minimalistic host unit test builds
-        list(REMOVE_ITEM common_reqs ${component_lib})
+        # set the component library 
+        foreach(comp_lib ${common_reqs})
+            __component_get_target(component_target ${comp_lib})
+            __component_get_property(lib ${component_target} COMPONENT_LIB)
+            list(APPEND common_comps_lib ${lib})     
+        endforeach()
+            
+        list(REMOVE_ITEM common_comps_lib ${component_lib})
+        link_libraries(${common_comps_lib})
     endif()
-    link_libraries(${common_reqs})
 
     idf_build_get_property(config_dir CONFIG_DIR)
 
@@ -144,40 +151,6 @@ endfunction()
 
 
 
-# @name __component_set_dependencies 
-#   
-# @param0  requires
-# @param1  type
-# @note    used to set the dependency    
-# @usage   usage  
-# @scope  scope   
-# scope tells where should this cmake function used 
-# # 
-# macro(__component_set_dependencies components type)
-    
-#     # get the build components 
-#     idf_build_get_property(build_comps BUILD_COMPONENTS)
-#     foreach(comp_name ${components})
-#         # get the component target 
-#         list(FIND build_comps ${comp_name} res)
-#         if(NOT res EQUAL -1)
-#             __component_get_target(component_target ${comp_name} )
-#             __component_get_property(req_lib ${component_target} COMPONENT_LIB)
-#             message(STATUS "merging  ${component_target} to  ${component_lib}")  
-#             if("${type}" STREQUAL "PRIVATE")
-#                 set_property(TARGET ${component_lib} APPEND PROPERTY LINK_LIBRARIES ${req_lib})
-#                 set_property(TARGET ${component_lib} APPEND PROPERTY INTERFACE_LINK_LIBRARIES $<LINK_ONLY:${req_lib}>)
-#             elseif("${type}" STREQUAL "PUBLIC")
-#                 set_property(TARGET ${component_lib} APPEND PROPERTY LINK_LIBRARIES ${req_lib})
-#                 set_property(TARGET ${component_lib} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${req_lib})
-#             else() # INTERFACE
-#                 set_property(TARGET ${component_lib} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${req_lib})
-#             endif()
-#         endif()
-#     endforeach()
-# endmacro()
-
-
 # __component_set_dependencies, __component_set_all_dependencies
 #
 #  Links public and private requirements for the currently processed component
@@ -215,169 +188,10 @@ macro(__component_set_all_dependencies)
 endmacro()
 
 
-# @name __component_add_include_dirs 
-#   
-# @param0  lib 
-# @param1  dirs list of directories
-# @param   type 
-# @note    used to include the directory to the target   
-# @usage   usage  
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-macro(__component_add_include_dirs lib dirs type)
-    foreach(dir ${dirs})
-        get_filename_component(_dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
-        if(NOT IS_DIRECTORY ${_dir})
-            message(FATAL_ERROR "Include directory '${_dir}' is not a directory.")
-        endif()
-        target_include_directories(${lib} ${type} ${_dir})
-    endforeach()
-endmacro()
-
-
-
-# # @name __component_set_properties 
-# #    
-# # @note    set the component properties from the  input parameters  
-# # @usage   used in include_build_component
-# # @scope  scope   
-# # scope tells where should this cmake function used 
-# # 
-# macro(__component_set_properties)
-#     __component_get_property(type ${component_target} COMPONENT_TYPE)
-
-#     # Fill in the rest of component property
-#     __component_set_property(${component_target} SRCS "${sources}")
-#     __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
-
-#     # add requires and prev_requires component 
-#     __component_set_property(${component_target} REQUIRES "${__REQUIRES}")
-#     __component_set_property(${component_target} PRIV_REQUIRES "${__PRIV_REQUIRES}")
-    
-
-#     if(type STREQUAL LIBRARY)
-#         __component_set_property(${component_target} PRIV_INCLUDE_DIRS "${__PRIV_INCLUDE_DIRS}")
-#     endif()
-
-#     __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
-#     __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
-#     __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
-#     __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
-
-#     # set the whole archieve property to 1 or 0
-#     __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
-# endmacro()
-
+# __component_add_sources, __component_check_target, __component_add_include_dirs
 #
-# @name __component_set_properties 
-#    
-# @note    set the component properties from the  input parameters  
-# @usage   # Called during component registration, sets basic properties of the current component.
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-macro(__component_set_properties)
-    __component_get_property(type ${component_target} COMPONENT_TYPE)
-
-    # Fill in the rest of component property
-    __component_set_property(${component_target} SRCS "${sources}")
-    __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
-
-    if(type STREQUAL LIBRARY)
-        __component_set_property(${component_target} PRIV_INCLUDE_DIRS "${__PRIV_INCLUDE_DIRS}")
-    endif()
-
-    __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
-    __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
-    __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
-    __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
-
-    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
-endmacro()
-
-
-# @name __component_check_target 
-#   
-# @note    check that if there is a target requirement for the particular idf_component_register
-# @usage   idf_compoent_register
-# @scope  the above function only 
-# scope tells where should this cmake function used 
-# 
-# macro(__component_check_target)
-#     if(__REQUIRED_IDF_TARGETS)
-#         idf_build_get_property(idf_target IDF_TARGET)
-#         list(FIND __REQUIRED_IDF_TARGETS ${idf_target} res)
-#         if(res EQUAL -1)
-#             message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
-#         endif()
-#     endif()
-# endmacro()
-
-macro(__component_check_target)
-    if(__REQUIRED_IDF_TARGETS)
-        idf_build_get_property(idf_target IDF_TARGET)
-        if(NOT idf_target IN_LIST __REQUIRED_IDF_TARGETS)
-            message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
-        endif()
-    endif()
-endmacro()
-
-
-
-# @name __component_add_sources 
-#   
-# @param0  param0 
-# @param1  param1 
-# @note    Note   
-# @usage   usage  
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-# macro(__component_add_sources sources)
-#     set(sources "")
-#     if(__SRCS)
-#         if(__SRC_DIRS)
-#             message(WARNING "SRCS and SRC_DIRS are both specified; ignoring SRC_DIRS.")
-#         endif()
-#         foreach(src ${__SRCS})
-#             get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-#             list(APPEND sources ${src})
-#         endforeach()
-#     else()
-#         if(__SRC_DIRS)
-#             foreach(dir ${__SRC_DIRS})
-#                 get_filename_component(abs_dir ${dir} ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-
-#                 if(NOT IS_DIRECTORY ${abs_dir})
-#                     message(FATAL_ERROR "SRC_DIRS entry '${dir}' does not exist.")
-#                 endif()
-
-#                 file(GLOB dir_sources "${abs_dir}/*.c" "${abs_dir}/*.cpp" "${abs_dir}/*.S")
-#                 list(SORT dir_sources)
-
-#                 if(dir_sources)
-#                     foreach(src ${dir_sources})
-#                         get_filename_component(src "${src}" ABSOLUTE BASE_DIR ${COMPONENT_DIR})
-#                         list(APPEND sources "${src}")
-#                     endforeach()
-#                 else()
-#                     message(WARNING "No source files found for SRC_DIRS entry '${dir}'.")
-#                 endif()
-#             endforeach()
-#         endif()
-
-#         if(__EXCLUDE_SRCS)
-#             foreach(src ${__EXCLUDE_SRCS})
-#                 get_filename_component(src "${src}" ABSOLUTE)
-#                 list(REMOVE_ITEM sources "${src}")
-#             endforeach()
-#         endif()
-#     endif()
-
-#     list(REMOVE_DUPLICATES sources)
-# endmacro()
-
+# Utility macros for component registration. Adds source files and checks target requirements,
+# and adds include directories respectively.
 macro(__component_add_sources sources)
     set(sources "")
     if(__SRCS)
@@ -422,8 +236,46 @@ macro(__component_add_sources sources)
     list(REMOVE_DUPLICATES sources)
 endmacro()
 
+macro(__component_add_include_dirs lib dirs type)
+    foreach(dir ${dirs})
+        get_filename_component(_dir ${dir} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+        if(NOT IS_DIRECTORY ${_dir})
+            message(FATAL_ERROR "Include directory '${_dir}' is not a directory.")
+        endif()
+        target_include_directories(${lib} ${type} ${_dir})
+    endforeach()
+endmacro()
 
 
+macro(__component_check_target)
+    if(__REQUIRED_IDF_TARGETS)
+        idf_build_get_property(idf_target IDF_TARGET)
+        if(NOT idf_target IN_LIST __REQUIRED_IDF_TARGETS)
+            message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
+        endif()
+    endif()
+endmacro()
+
+
+
+macro(__component_set_properties)
+    __component_get_property(type ${component_target} COMPONENT_TYPE)
+
+    # Fill in the rest of component property
+    __component_set_property(${component_target} SRCS "${sources}")
+    __component_set_property(${component_target} INCLUDE_DIRS "${__INCLUDE_DIRS}")
+
+    if(type STREQUAL LIBRARY)
+        __component_set_property(${component_target} PRIV_INCLUDE_DIRS "${__PRIV_INCLUDE_DIRS}")
+    endif()
+
+    __component_set_property(${component_target} LDFRAGMENTS "${__LDFRAGMENTS}")
+    __component_set_property(${component_target} EMBED_FILES "${__EMBED_FILES}")
+    __component_set_property(${component_target} EMBED_TXTFILES "${__EMBED_TXTFILES}")
+    __component_set_property(${component_target} REQUIRED_IDF_TARGETS "${__REQUIRED_IDF_TARGETS}")
+
+    __component_set_property(${component_target} WHOLE_ARCHIVE ${__WHOLE_ARCHIVE})
+endmacro()
 
 # idf_component_optional_requires
 #
@@ -433,18 +285,30 @@ endmacro()
 # @param[in]  type of the dependency, one of: PRIVATE, PUBLIC, INTERFACE
 # @param[in, multivalue] list of component names which should be added as dependencies
 #
+
 function(idf_component_optional_requires req_type)
     set(optional_reqs ${ARGN})
     idf_build_get_property(build_components BUILD_COMPONENTS)
     foreach(req ${optional_reqs})
-        # .search for the input component in the 
-        list(FIND build_components ${req} res)
+    list(FIND build_components ${req} res)
         if(NOT res EQUAL -1)
             idf_component_get_property(req_lib ${req} COMPONENT_LIB)
             target_link_libraries(${COMPONENT_LIB} ${req_type} ${req_lib})
-
-        else()
-            message(WARNING "can't find the ${req} in the build components ")
         endif()
     endforeach()
 endfunction()
+
+# add link dependency to the target 
+function(idf_component_add_link_dependency)
+    set(single_value FROM TO)
+    cmake_parse_arguments(_ "" "${single_value}" "" ${ARGN})
+
+    idf_component_get_property(from_lib ${__FROM} COMPONENT_LIB)
+    if(__TO)
+        idf_component_get_property(to_lib ${__TO} COMPONENT_LIB)
+    else()
+        set(to_lib ${COMPONENT_LIB})
+    endif()
+    set_property(TARGET ${from_lib} APPEND PROPERTY INTERFACE_LINK_LIBRARIES $<LINK_ONLY:${to_lib}>)
+endfunction()
+

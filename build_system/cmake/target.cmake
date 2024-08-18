@@ -188,6 +188,15 @@ function(find_target_mcu sdkconf_file target)
     # set the TARGET property for the project 
     set_property(TARGET __idf_build_target PROPERTY IDF_TARGET "${env_idf_target}")
 
+    if("${target}" STREQUAL "esp32" OR "${target}" STREQUAL "esp32s2" OR "${target}" STREQUAL "esp32s3")
+        set_property(TARGET __idf_build_target PROPERTY IDF_TARGET_ARCH "xtensa")
+    elseif("${target}" STREQUAL "linux")
+        # No arch specified for linux host builds at the moment
+        set_property(TARGET __idf_build_target PROPERTY IDF_TARGET_ARCH "")
+    else()
+        set_property(TARGET __idf_build_target PROPERTY IDF_TARGET_ARCH "riscv")
+    endif()
+
     # set the target in the parent scope
     set(${target} "${env_idf_target}" PARENT_SCOPE)
     

@@ -170,7 +170,8 @@ macro(project_init )
     idf_build_set_property(PROJECT_DIR  "${CMAKE_SOURCE_DIR}")
     idf_build_set_property(BUILD_DIR "${CMAKE_BINARY_DIR}")
     idf_build_set_property(SRC_CONFIG_DIR "${PATH_SRC_CONFIG_DIR}")
-    
+    idf_build_set_property(COMPILER_DIR "${PATH_COMPILER_PATH}")
+
     if (NOT COMPONENTS)
         message(FATAL_ERROR "no build components are specified for the project ")
     endif()
@@ -199,7 +200,7 @@ macro(project_init )
     tools_init(${target})
     
     # init the enviourment for the target
-    build_init()
+    build_init(${target})
 
     # generate the sdkconfig file and include it in the build process 
     idf_generate_and_add_sdkconfig() 

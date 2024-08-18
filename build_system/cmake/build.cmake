@@ -206,67 +206,63 @@ endfunction()
 function(__build_set_default_build_flags)
 
     set(compile_definitions 
-                    "ESP_PLATFORM"
+                    "-DESP_PLATFORM"
                     # "IDF_VER=\\\"idf_ver_git\\\""
-                    "SOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE"
-                    "_GNU_SOURCE"
-                    "configENABLE_FREERTOS_DEBUG_OCDAWARE=1"
+                    "-DSOC_MMU_PAGE_SIZE=CONFIG_MMU_PAGE_SIZE"
+                    "-D_GNU_SOURCE"
+                    "-DconfigENABLE_FREERTOS_DEBUG_OCDAWARE=1"
                     # @todo this should be set by build_get_idf_git_revision 
-                    "IDF_VER=${PROJECT_SDK_VERSION}"
+                    "-DIDF_VER=${PROJECT_SDK_VERSION}"
 
                     ${COMPILER_DEFINATION}
                     )
                     
     if(NOT BOOTLOADER_BUILD)
-        list(APPEND compile_definitions "_POSIX_READER_WRITER_LOCKS" )
+        list(APPEND compile_definitions "-D_POSIX_READER_WRITER_LOCKS" )
 
     endif()
     set (compile_flags       
 
-                                    "-fno-builtin-memcpy"
-                                    "-fno-builtin-memset" 
-                                    "-fno-builtin-bzero" 
-                                    "-fno-builtin-stpcpy"
-                                    "-fno-builtin-strncpy" 
-                                    "-fno-jump-tables"
-                                    "-fno-tree-switch-conversion"
-                                    
-                                    "-freorder-blocks"
-                                    # "-mtext-section-literals"
-                                    
-                                    # Default is dwarf-5 since GCC 11, fallback to dwarf-4 because of binary size
-                                    # TODO: IDF-5160
-                                    "-gdwarf-4"
-                                    # always generate debug symbols (even in release mode, these don't
-                                    # go into the final binary so have no impact on size
-                                    "-ggdb"
-                                    # GCC flag used in ESP32 development to enable function calls to distant memory regions,
-                                    #  particularly Flash memory, allowing for more flexible memory usage in embedded applications.
-                                    "-mlongcalls"
-                                    "-fdiagnostics-color=always"
-                                    "-fstrict-volatile-bitfields"
-                                    "-ffunction-sections"
-                                    "-fdata-sections"
-                                    
-                                    # warning-related flags
-                                    "-Wall"
-                                    "-Werror=all"
-                                    "-Wextra"
+                    "-fno-builtin-memcpy"
+                    "-fno-builtin-memset" 
+                    "-fno-builtin-bzero" 
+                    "-fno-builtin-stpcpy"
+                    "-fno-builtin-strncpy" 
+                    "-fno-jump-tables"
+                    "-fno-tree-switch-conversion"
+                    
+                    "-freorder-blocks"
+                    # "-mtext-section-literals"
+                    
+                    # Default is dwarf-5 since GCC 11, fallback to dwarf-4 because of binary size
+                    # TODO: IDF-5160
+                    "-gdwarf-4"
+                    # always generate debug symbols (even in release mode, these don't
+                    # go into the final binary so have no impact on size
+                    "-ggdb"
+                    # GCC flag used in ESP32 development to enable function calls to distant memory regions,
+                    #  particularly Flash memory, allowing for more flexible memory usage in embedded applications.
+                    "-mlongcalls"
+                    "-fdiagnostics-color=always"
+                    "-fstrict-volatile-bitfields"
+                    "-ffunction-sections"
+                    "-fdata-sections"
+                    
+                    # warning-related flags
+                    "-Wall"
+                    "-Werror=all"
+                    "-Wextra"
 
-                                    "-Wno-frame-address"
-                                    "-Wno-error=unused-function"
-                                    "-Wno-error=unused-variable"
-                                    "-Wno-error=unused-but-set-variable"
-                                    "-Wno-error=deprecated-declarations"
-                                    "-Wno-unused-parameter"
-                                    "-Wno-sign-compare"
-                                    # ignore multiple enum conversion warnings since gcc 11
-                                    # TODO: IDF-5163
-                                    "-Wno-enum-conversion"
-                                    
-                                    $<$<COMPILE_LANGUAGE:C>:${COMPILER_C_OPTIONS}>
-                                    $<$<COMPILE_LANGUAGE:CXX>:${COMPILER_CXX_OPTIONS}>
-                                    $<$<COMPILE_LANGUAGE:ASM>:${COMPILER_ASM_OPTIONS}>
+                    "-Wno-frame-address"
+                    "-Wno-error=unused-function"
+                    "-Wno-error=unused-variable"
+                    "-Wno-error=unused-but-set-variable"
+                    "-Wno-error=deprecated-declarations"
+                    "-Wno-unused-parameter"
+                    "-Wno-sign-compare"
+                    # ignore multiple enum conversion warnings since gcc 11
+                    # TODO: IDF-5163
+                    "-Wno-enum-conversion"
                                     )
     # set the compile definations and flags as common 
     # set(COMMON_OPTIONS "${compile_flags}" CACHE STRING "compile flags for the target")
@@ -278,14 +274,17 @@ function(__build_set_default_build_flags)
     #     message(FATAL_ERROR "Build component directory is missing and is required by the build process")
     # endif()
 
-    
+    spaces2list(COMPILER_C_OPTIONS)
+    spaces2list(COMPILER_CXX_OPTIONS)
+    spaces2list(COMPILER_ASM_OPTIONS)
+
     # set the compiler flags for all the build compopnents in the directory z
     idf_build_set_property(COMPILE_DEFINITIONS "${compile_definitions}" APPEND)
-    idf_build_set_property(COMPILE_OPTIONS "${compile_flags}" APPEND)      
+    idf_build_set_property(COMPILE_OPTIONS "${compile_flags}" APPEND)
     
-    idf_build_set_property(C_COMPILE_OPTIONS "${compile_flags}" APPEND)
-    idf_build_set_property(CXX_COMPILE_OPTIONS "${compile_flags}" APPEND)
-    idf_build_set_property(ASM_COMPILE_OPTIONS "${compile_flags}" APPEND)
+    idf_build_set_property(C_COMPILE_OPTIONS "${compile_flags}" "${COMPILER_C_OPTIONS}" APPEND)
+    idf_build_set_property(CXX_COMPILE_OPTIONS "${compile_flags}" "${COMPILER_CXX_OPTIONS}" APPEND)
+    idf_build_set_property(ASM_COMPILE_OPTIONS "${compile_flags}" "${COMPILER_ASM_OPTIONS}" APPEND)
 
 endfunction()
 
@@ -309,6 +308,10 @@ function(__build_set_defaults_prop)
     set(ENV{IDF_ENV_FPGA} 0)
     
     idf_build_set_property(__IDF_ENV_FPGA 0)
+    set_property(GLOBAL PROPERTY __IDF_ENV_SET 1)
+
+    # if bootloader build
+    idf_build_set_property(BOOTLOADER_BUILD "${BOOTLOADER_BUILD}")
     # the c standard is defined in the toolchain file but we can override it here according 
     # to specified in the sdkconfig.cmake file 
     # get the build standard property 
@@ -321,7 +324,7 @@ endfunction()
 # @scope  parent scope
 # scope tells where should this cmake function used 
 # 
-function(build_init)
+function(build_init  target) 
    
     # init the deafult build specs and lang version done in the toolchain_file.cmake
     __build_set_defaults_prop()
@@ -335,6 +338,16 @@ function(build_init)
 
     # call the kconfig init 
     kconfig_init()
+
+    if("${target}" STREQUAL "linux")
+        set(requires_common freertos log esp_rom esp_common)
+        idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
+    else()
+        # add the common components 
+        set(requires_common cxx newlib freertos esp_hw_support heap log soc hal esp_rom esp_common esp_system)
+        idf_build_set_property(__COMPONENT_REQUIRES_COMMON "${requires_common}")
+    endif()
+
 
 endfunction()
 
