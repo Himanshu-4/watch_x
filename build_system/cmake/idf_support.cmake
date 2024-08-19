@@ -54,15 +54,38 @@ macro(idf_generate_and_add_sdkconfig)
     # scan all the components in the component directory 
     # and make their component target so menuconfig can find kconfig files 
     __scan_components( ${sdk_path} ${prefix})
-     
 
-    # have to add the bootloader kconfig files also 
 
+    # get the component requirements after scannig the components 
+    # __component_get_requirements()
+
+    
     # set the neccesaary components 
     __set_neccessary_components(build_components)
-
     # show the build components 
     message(STATUS "build components are ${build_components}")
+
+    # generate the component target from the components 
+    foreach(comps ${build_components})
+        __component_get_target(comp_target "${comps}")
+        idf_build_set_property(__COMPONENT_TARGETS ${comp_target} APPEND)
+        idf_build_set_property(__BUILD_COMPONENT_TARGETS ${comp_target} APPEND)
+    endforeach()
+    
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    # after getting the requirements we have to expand every component requirements
+    # foreach(component_target ${component_targets})
+    #     __build_expand_requirements(${component_target})
+    # endforeach()
+    # idf_build_unset_property(__COMPONENT_TARGETS_SEEN)
+
+    # also add the bootloader component 
+    if(NOT EXISTS "${sdk_path}/bootloader")
+        message(FATAL_ERROR "bootloader not present in the ${sdk_path} need bootloader")
+    endif()
+    message(STATUS "Adding bootloader kconfig files")
+    get_filename_component(bootloader_path "${sdk_path}/bootloader" ABSOLUTE)
+    __kconfig_bootloader_component_add("${bootloader_path}")
     
     # now add the build components to the kconfig generator 
     # generate the sdkconfigs from gathers kconfigs*
@@ -96,21 +119,53 @@ macro(idf_generate_and_add_sdkconfig)
         message(FATAL_ERROR "Failed to find sdkconfig.cmake file")
     endif()
 
+
+    # also import the configs_list items as idf_build_target property 
+    idf_build_set_property(__CONFIG_VARIABLES "${CONFIGS_LIST}")
+    foreach(config ${CONFIGS_LIST})
+        set_property(TARGET __idf_build_target PROPERTY ${config} "${${config}}")
+    endforeach()
 endmacro()
 
+   
 # @name idf_include_components
 #   
-# @note    used to build the s components that idf found in build_compos path and 
-#           that are required for by the project, otherwise unneccessary components 
-#           don't get included in the build, this only includes the component
-# @usage   usage  
+# @param0  components 
+# @note    used to include the component (project_include.cmake files )
+# @usage   the project_include.cmake files should be included in early expansion of 
+#           components as some comps are depend on them like esptoolpy partition_table etc 
+#           they have interconnected dependecy that need to be resolved first   
 # @scope  scope   
 # scope tells where should this cmake function used 
-# 
+#
 macro(idf_include_components)
+    idf_build_get_property(components_targets __BUILD_COMPONENT_TARGETS)
+    
+    list(REMOVE_DUPLICATES components_targets)
+    
+    idf_build_get_property(sdk_path SDK_PATH) 
 
-    idf_build_get_property(build_comps BUILD_COMPONENTS)
-    __include_project_cmake_files("${build_comps}")
+    # Make each build property available as a read-only variable
+    idf_build_get_property(build_properties __BUILD_PROPERTIES)
+    foreach(build_property ${build_properties})
+        idf_build_get_property(val ${build_property})
+        set(${build_property} "${val}")
+    endforeach()
+
+    foreach(component_target  ${components_targets})
+        __component_get_property(dir ${component_target} COMPONENT_DIR)
+        __component_get_property(_name ${component_target} COMPONENT_NAME)
+        set(COMPONENT_NAME ${_name})
+        set(COMPONENT_DIR ${dir})
+        set(COMPONENT_PATH ${dir})  # this is deprecated, users are encouraged to use COMPONENT_DIR;
+                                    # retained for compatibility
+        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
+            # include the project include.cmake file
+            message(STATUS "Adding project.cmake file from ${component_target}")
+            include(${COMPONENT_DIR}/project_include.cmake)
+        endif()
+    endforeach()
+
 endmacro()
 
 
@@ -144,19 +199,32 @@ endmacro()
 # scope tells where should this cmake function used 
 # 
 function(__idf_build_start_process)
- 
+    
+    # All targets built under this scope is with the ESP-IDF build system
+    set(ESP_PLATFORM 1)
+
     idf_build_get_property(build_dir BUILD_DIR)
 
     set(comps_build_dir "${build_dir}/components")
 
-    idf_build_get_property(build_comps BUILD_COMPONENTS)
-    list(REMOVE_DUPLICATES build_comps)
+    idf_build_get_property(components_targets __BUILD_COMPONENT_TARGETS)
+    list(REMOVE_DUPLICATES components_targets)
+    
+
+     # Get a list of common component requirements in component targets form (previously
+    # we just have a list of component names)
+    idf_build_get_property(common_reqs __COMPONENT_REQUIRES_COMMON)
+    foreach(common_req ${common_reqs})
+        __component_get_target(component_target ${common_req})
+        __component_get_property(lib ${component_target} COMPONENT_LIB)
+        idf_build_set_property(___COMPONENT_REQUIRES_COMMON ${lib} APPEND)
+    endforeach()
+
     
     idf_build_get_property(prefix __PREFIX)
     # Add each component as a subdirectory, processing each component's CMakeLists.txt
-    foreach(component ${build_comps})
-        # get the component target from component 
-        __component_get_target(component_target ${component})
+    foreach(component_target ${components_targets})
+        # get the component properties and define them as var 
         __component_get_property(dir ${component_target} COMPONENT_DIR)
         __component_get_property(_name ${component_target} COMPONENT_NAME)
         __component_get_property(alias ${component_target} COMPONENT_ALIAS)
@@ -179,6 +247,8 @@ function(__idf_build_start_process)
     idf_build_get_property(ldgen __LDGEN_LIBRARIES)
     message(STATUS "ldgen files are ${ldgen}")
 
+    
+    unset(ESP_PLATFORM)
 endfunction()
 
 

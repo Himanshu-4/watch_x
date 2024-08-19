@@ -79,6 +79,7 @@ function(idf_component_register)
     add_cxx_compile_options("${cxx_compile_options}")
     add_asm_compile_options("${asm_compile_options}")
 
+    __component_set_properties()
     # Unfortunately add_definitions() does not support generator expressions. A new command
     # add_compile_definition() does but is only available on CMake 3.12 or newer. This uses
     # add_compile_options(), which can add any option as the workaround.
@@ -88,16 +89,9 @@ function(idf_component_register)
     add_compile_options("${compile_definitions}")
 
     if(common_reqs) # check whether common_reqs exists, this may be the case in minimalistic host unit test builds
-        # set the component library 
-        foreach(comp_lib ${common_reqs})
-            __component_get_target(component_target ${comp_lib})
-            __component_get_property(lib ${component_target} COMPONENT_LIB)
-            list(APPEND common_comps_lib ${lib})     
-        endforeach()
-            
-        list(REMOVE_ITEM common_comps_lib ${component_lib})
-        link_libraries(${common_comps_lib})
+        list(REMOVE_ITEM common_reqs ${component_lib})
     endif()
+    link_libraries(${common_reqs})
 
     idf_build_get_property(config_dir CONFIG_DIR)
 
@@ -145,7 +139,6 @@ function(idf_component_register)
     # as COMPONENT_LIB for compatibility.
     set(COMPONENT_TARGET ${component_lib} PARENT_SCOPE)
 
-    __component_set_properties()
 
 endfunction()
 
@@ -156,7 +149,8 @@ endfunction()
 #  Links public and private requirements for the currently processed component
 macro(__component_set_dependencies reqs type)
     foreach(req ${reqs})
-        if(req IN_LIST build_component_targets)
+        list(FIND build_component_targets "${req}" ress)
+        if(NOT ress EQUAL -1)
             __component_get_property(req_lib ${req} COMPONENT_LIB)
             if("${type}" STREQUAL "PRIVATE")
                 set_property(TARGET ${component_lib} APPEND PROPERTY LINK_LIBRARIES ${req_lib})
@@ -250,7 +244,8 @@ endmacro()
 macro(__component_check_target)
     if(__REQUIRED_IDF_TARGETS)
         idf_build_get_property(idf_target IDF_TARGET)
-        if(NOT idf_target IN_LIST __REQUIRED_IDF_TARGETS)
+        list(FIND __REQUIRED_IDF_TARGETS ${idf_target} res) 
+        if(res EQUAL -1)
             message(FATAL_ERROR "Component ${COMPONENT_NAME} only supports targets: ${__REQUIRED_IDF_TARGETS}")
         endif()
     endif()

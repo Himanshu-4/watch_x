@@ -30,6 +30,7 @@ list(APPEND CMAKE_MODULE_PATH
 
 
 include(toolchain_file)
+include(depgraph)
 include(build)
 
 include(utility)

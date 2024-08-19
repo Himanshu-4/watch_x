@@ -189,14 +189,6 @@ function(__scan_components sdk_path prefix)
         get_filename_component(component_dir ${comp_dir} DIRECTORY)
         __add_individual_component("${component_dir}" ${prefix})
     endforeach()
-
-    # also add the bootloader component 
-    if(NOT EXISTS "${sdk_path}/bootloader")
-        message(FATAL_ERROR "bootloader not present in the ${sdk_path} need bootloader")
-    endif()
-    message(STATUS "Adding bootloader kconfig files")
-    get_filename_component(bootloader_path "${sdk_path}/bootloader" ABSOLUTE)
-    __kconfig_bootloader_component_add("${bootloader_path}")
     
     idf_build_get_property(scan SCAN_COMPONENTS)
     message(STATUS "------------------------------scan compoents are below-------------------------------\r\n${scan}\r\n-------------------------------------------------------------------------------------------------------")    
@@ -306,45 +298,6 @@ function(__set_neccessary_components comps)
 endfunction()
 
 
-# @name component_depends_include 
-#   
-# @param0  components 
-# @note    used to include the component (project_include.cmake files )
-# @usage   the project_include.cmake files should be included in early expansion of 
-#           components as some comps are depend on them like esptoolpy partition_table etc 
-#           they have interconnected dependecy that need to be resolved first   
-# @scope  scope   
-# scope tells where should this cmake function used 
-# 
-macro(__include_project_cmake_files  components)
-    idf_build_get_property(sdk_path SDK_PATH) 
-
-    # Make each build property available as a read-only variable
-    idf_build_get_property(build_properties __BUILD_PROPERTIES)
-    foreach(build_property ${build_properties})
-        idf_build_get_property(val ${build_property})
-        set(${build_property} "${val}")
-    endforeach()
-
-    list(SORT components)
-    foreach(comp ${components})
-        # get the component target 
-        __component_get_target(component_target ${comp})
-        __component_get_property(dir ${component_target} COMPONENT_DIR)
-        __component_get_property(_name ${component_target} COMPONENT_NAME)
-        set(COMPONENT_NAME ${_name})
-        set(COMPONENT_DIR ${dir})
-        set(COMPONENT_PATH ${dir})  # this is deprecated, users are encouraged to use COMPONENT_DIR;
-                                    # retained for compatibility
-        if(EXISTS ${COMPONENT_DIR}/project_include.cmake)
-            # include the project include.cmake file
-            message(STATUS "Adding project.cmake file from ${comp}")
-            include(${COMPONENT_DIR}/project_include.cmake)
-        endif()
-    endforeach()
-    
-endmacro()
-
 # @name __get_neccessary_components 
 #   
 # @param0  components   
@@ -380,6 +333,106 @@ function(__get_neccessary_components components)
         set(${components} ${build_comps} PARENT_SCOPE)
     endif()
 endfunction()
+
+
+
+#
+# Write a CMake file containing all component and their properties. This is possible because each component
+# keeps a list of all its properties.
+#
+function(__component_write_properties output_file)
+    idf_build_get_property(component_targets __COMPONENT_TARGETS)
+    foreach(component_target ${component_targets})
+        __component_get_property(component_properties ${component_target} __COMPONENT_PROPERTIES)
+        foreach(property ${component_properties})
+            __component_get_property(val ${component_target} ${property})
+            set(component_properties_text
+                "${component_properties_text}\nset(__component_${component_target}_${property} \"${val}\")")
+        endforeach()
+        file(WRITE ${output_file} "${component_properties_text}")
+    endforeach()
+endfunction()
+
+#
+# Write a CMake file containing set build properties, owing to the fact that an internal
+# list of properties is maintained in idf_build_set_property() call. This is used to convert
+# those set properties to variables in the scope the output file is included in.
+#
+function(__build_write_properties output_file)
+    idf_build_get_property(build_properties __BUILD_PROPERTIES)
+    foreach(property ${build_properties})
+        idf_build_get_property(val ${property})
+        set(build_properties_text "${build_properties_text}\nset(${property} \"${val}\")")
+    endforeach()
+    file(WRITE ${output_file} "${build_properties_text}")
+endfunction()
+
+
+#
+# Given a component directory, get the requirements by expanding it early. The expansion is performed
+# using a separate CMake script (the expansion is performed in a separate instance of CMake in scripting mode).
+#
+function(__component_get_requirements)
+
+    message(STATUS "Expanding the requirements of the componenets \r\n")
+    idf_build_get_property(idf_path IDF_PATH)
+    idf_build_get_property(idf_target IDF_TARGET)
+
+    idf_build_get_property(build_dir BUILD_DIR)
+    set(build_properties_file ${build_dir}/build_properties.temp.cmake)
+    set(component_properties_file ${build_dir}/component_properties.temp.cmake)
+    set(component_requires_file ${build_dir}/component_requires.temp.cmake)
+
+    __build_write_properties(${build_properties_file})
+    __component_write_properties(${component_properties_file})
+
+    execute_process(COMMAND "${CMAKE_COMMAND}"
+        -D "ESP_PLATFORM=1"
+        -D "IDF_TARGET=${idf_target}"
+        -D "BUILD_PROPERTIES_FILE=${build_properties_file}"
+        -D "COMPONENT_PROPERTIES_FILE=${component_properties_file}"
+        -D "COMPONENT_REQUIRES_FILE=${component_requires_file}"
+        -P "${idf_path}/tools/cmake/scripts/component_get_requirements.cmake"
+        RESULT_VARIABLE result
+        ERROR_VARIABLE error)
+
+    if(NOT result EQUAL 0)
+        message(FATAL_ERROR "${error}")
+    endif()
+
+    idf_build_get_property(idf_component_manager IDF_COMPONENT_MANAGER)
+    if(idf_component_manager EQUAL 1)
+        idf_build_get_property(python PYTHON)
+        idf_build_get_property(component_manager_interface_version __COMPONENT_MANAGER_INTERFACE_VERSION)
+
+        # Call for the component manager once again to inject dependencies
+        # It modifies the requirements file generated by component_get_requirements.cmake script by adding dependencies
+        # defined in component manager manifests to REQUIRES and PRIV_REQUIRES fields.
+        # These requirements are also set as MANAGED_REQUIRES and MANAGED_PRIV_REQUIRES component properties.
+        execute_process(COMMAND ${python}
+            "-m"
+            "idf_component_manager.prepare_components"
+            "--project_dir=${project_dir}"
+            "--interface_version=${component_manager_interface_version}"
+            "inject_requirements"
+            "--idf_path=${idf_path}"
+            "--build_dir=${build_dir}"
+            "--component_requires_file=${component_requires_file}"
+            RESULT_VARIABLE result
+            ERROR_VARIABLE error)
+
+        if(NOT result EQUAL 0)
+            message(FATAL_ERROR "${error}")
+        endif()
+    endif()
+
+    include(${component_requires_file})
+
+    file(REMOVE ${build_properties_file})
+    file(REMOVE ${component_properties_file})
+    file(REMOVE ${component_requires_file})
+endfunction()
+
 
 
 # @name target_add_bin_data 
